@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-10-31
+
+- Road reading identifies more street objects with the same on-device model: trucks, buses, motorcycles, bicycles, trams/trains, dogs, cats, horses and stop signs, as well as cars, people and traffic lights (experimental).
+- Each detection on the camera view is labelled with what it is and how sure the model is (e.g. "Truck 82%", "Red light 75%").
+- Count chips show only what is in view ("2 cars · 1 truck · 3 people").
+- The 3D view draws trucks, buses, trams, motorcycles and bicycles with riders, animals and stop signs in their own shapes. The demo drive adds a truck and a cyclist.
+
 ## 0.2.0 — 2026-10-31
 
 Closer to a modern EV dashboard.

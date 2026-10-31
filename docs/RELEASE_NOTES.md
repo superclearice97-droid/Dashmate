@@ -1,5 +1,8 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.3.0
+- Road reading now identifies and labels cars, trucks, buses, motorcycles, bicycles, trams/trains, people, dogs, cats, horses, traffic lights (with colour) and stop signs, and draws each in the 3D view (**experimental**: checked on street-video frames, not yet on real devices; misses small or distant objects)
+
 ### New in 0.2.0
 - Layout and car view closer to a modern EV dashboard: full-height car view, Navigate bar, turn card with turn list, media card on the map, bottom bar with volume
 - Cars, people and traffic lights seen by the camera drawn around your car (**experimental**, part of road reading)
@@ -15,6 +18,6 @@
 - Phone Drive Mode, upright or sideways; light and dark looks
 - Demo drive (car button › Controls › Try it)
 - **Experimental:** phone-as-GPS pairing for Wi-Fi-only iPads (not yet tried on real devices)
-- **Experimental:** road reading with the camera: cars, people, traffic lights, "Green · go" (not yet tried on real devices; not a safety system)
+- **Experimental:** road reading with the camera: identifies vehicles, bikes, people, animals, traffic lights and stop signs; "Green · go" (not yet tried on real devices; not a safety system)
 
 Set up while parked. Posted signs always beat the app. See TERMS.md and PRIVACY.md.

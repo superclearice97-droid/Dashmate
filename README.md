@@ -12,7 +12,7 @@ A car dashboard for the device you already have. Mount an iPad, iPhone or Androi
 - **Trip numbers** (distance, average and top speed) under the car button › Controls.
 - **Drive Mode on phones**: works upright or sideways.
 - **Phone as the GPS** for a Wi-Fi-only iPad (experimental): pair once with two QR codes and the iPad uses the phone's location.
-- **Road reading** (experimental): the phone's camera spots cars, people and traffic lights on the device, tells you when a red light turns green while you're stopped, and shows the car ahead in the 3D view.
+- **Road reading** (experimental): the phone's camera identifies street objects on the device and labels them: **cars, trucks, buses, motorcycles, bicycles, trams/trains, people, dogs, cats, horses, traffic lights (with their colour) and stop signs**. It tells you when a red light turns green while you're stopped, and draws everything it sees around your car in the 3D view.
 - **Demo drive** (car button › Controls › Try it) to see everything at home.
 
 It is free and open source, has no accounts, ads or analytics, and every online feature can be switched off. See [PRIVACY.md](PRIVACY.md).
@@ -30,7 +30,7 @@ Step-by-step install instructions: [docs/INSTALL.md](docs/INSTALL.md).
 | iPad and phone layouts, light/dark, demo drive (with simulated traffic), turn list, Controls, music panel, pairing screens | Checked in a desktop browser at iPad and iPhone sizes |
 | Live map tiles, routing, search, speed limits from the internet | Built to each service's public API; not tried on a real drive yet |
 | **Phone ⇄ iPad pairing** | **Experimental**: not yet tried on real devices |
-| **Road reading (camera)** | **Experimental**: detection and light colour checked on street-video frames (~90 ms/frame in a desktop browser); not yet tried on real devices; misses small, distant lights; not a safety system |
+| **Road reading (camera)** | **Experimental**: identification, labels and light colour checked on street-video frames (~90 ms/frame in a desktop browser); not yet tried on real devices; misses small or distant objects and sometimes mistakes a sign or shelter for a car; not a safety system |
 
 ## How it's built
 

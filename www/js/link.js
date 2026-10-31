@@ -7,6 +7,7 @@
 // connect, and all data is encrypted (DTLS).
 import { emit, on } from './bus.js';
 import { encodeDescription, decodeDescription } from './core/pairing-code.js';
+import { KINDS } from './core/vision-math.js';
 
 let pc = null;
 let channel = null;
@@ -56,10 +57,10 @@ function receive(text) {
   } else if (m.t === 'vision') {
     const c = m.counts || {};
     emit('remote-vision', {
-      counts: { car: num(c.car, 0, 99) ? c.car : 0, person: num(c.person, 0, 99) ? c.person : 0, light: num(c.light, 0, 99) ? c.light : 0 },
+      counts: Object.fromEntries(KINDS.map((k) => [k, num(c[k], 0, 99) ? c[k] : 0])),
       light: ['red', 'yellow', 'green'].includes(m.light) ? m.light : null,
-      boxes: (Array.isArray(m.boxes) ? m.boxes.slice(0, 20) : [])
-        .filter((x) => ['car', 'person', 'light'].includes(x?.k) && Array.isArray(x.b) && x.b.length === 4 && x.b.every((v) => num(v, 0, 1)))
+      boxes: (Array.isArray(m.boxes) ? m.boxes.slice(0, 24) : [])
+        .filter((x) => KINDS.includes(x?.k) && Array.isArray(x.b) && x.b.length === 4 && x.b.every((v) => num(v, 0, 1)))
         .map((x) => ({ k: x.k, b: x.b, c: ['red', 'yellow', 'green'].includes(x.c) ? x.c : null })),
       aspect: num(m.aspect, 0.2, 5) ? m.aspect : 16 / 9,
     });

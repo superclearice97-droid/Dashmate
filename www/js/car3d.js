@@ -1,6 +1,7 @@
 // The 3D view of your car on the road (three.js), in the style of modern EV dashboards:
 // a multi-lane road that fades into the distance, lane lines that move with your real
-// speed, and the cars, people and traffic lights the camera sees, placed where they are.
+// speed, and the vehicles, bikes, people, animals, traffic lights and stop signs the
+// camera sees, placed where they are.
 // All models are original low-poly shapes.
 import * as THREE from '../vendor/three/three.module.min.js';
 
@@ -70,6 +71,83 @@ function buildOther(mat) {
   const top = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 2.2), mat);
   top.position.set(0, 1.15, 0.2);
   g.add(body, top);
+  return g;
+}
+
+// Box-shaped vehicles: [width, height, length] in metres, plus a darker window band.
+function buildBoxVehicle(mat, [w, h, l], windows = true) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(w, h - 0.35, l), mat);
+  body.position.y = 0.35 + (h - 0.35) / 2;
+  g.add(body);
+  if (windows) {
+    const band = new THREE.Mesh(new THREE.BoxGeometry(w + 0.02, 0.6, l * 0.92), new THREE.MeshStandardMaterial({ color: 0x2b3445, roughness: 0.3 }));
+    band.position.y = h - 0.75;
+    g.add(band);
+  }
+  return g;
+}
+
+function buildTruck(mat) {
+  const g = new THREE.Group();
+  const cargo = buildBoxVehicle(mat, [2.5, 3.4, 6.2], false);
+  cargo.position.z = 0.9;
+  const cab = buildBoxVehicle(mat, [2.4, 2.8, 2.2]);
+  cab.position.z = -3.4;
+  g.add(cargo, cab);
+  return g;
+}
+
+// A two-wheeler: two wheels, a frame, and a rider.
+function buildTwoWheeler(mat, riderMat, motor) {
+  const g = new THREE.Group();
+  const r = motor ? 0.32 : 0.34;
+  const wheelGeo = new THREE.TorusGeometry(r, motor ? 0.09 : 0.04, 8, 18);
+  wheelGeo.rotateY(Math.PI / 2);
+  for (const z of [-0.6, 0.6]) {
+    const wheel = new THREE.Mesh(wheelGeo, mat);
+    wheel.position.set(0, r, z);
+    g.add(wheel);
+  }
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(motor ? 0.35 : 0.08, motor ? 0.45 : 0.08, 1.2), mat);
+  frame.position.y = motor ? 0.6 : 0.65;
+  const rider = buildPerson(riderMat);
+  rider.scale.setScalar(0.85);
+  rider.position.y = 0.45;
+  g.add(frame, rider);
+  return g;
+}
+
+function buildAnimal(mat) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.18, 0.55, 4, 8), mat);
+  body.rotation.x = Math.PI / 2;
+  body.position.y = 0.45;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), mat);
+  head.position.set(0, 0.62, -0.42);
+  g.add(body, head);
+  for (const [x, z] of [[-0.12, -0.25], [0.12, -0.25], [-0.12, 0.25], [0.12, 0.25]]) {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 6), mat);
+    leg.position.set(x, 0.15, z);
+    g.add(leg);
+  }
+  return g;
+}
+
+// An original red octagon on a pole (no lettering).
+function buildStopSign() {
+  const g = new THREE.Group();
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 2.2, 8), new THREE.MeshStandardMaterial({ color: 0x9aa0aa }));
+  pole.position.y = 1.1;
+  const faceGeo = new THREE.CylinderGeometry(0.4, 0.4, 0.05, 8);
+  faceGeo.rotateX(Math.PI / 2);
+  faceGeo.rotateZ(Math.PI / 8);
+  const face = new THREE.Mesh(faceGeo, new THREE.MeshStandardMaterial({ color: 0xd7262e, emissive: 0x5a0a0d }));
+  face.position.y = 2.4;
+  const rim = new THREE.Mesh(new THREE.TorusGeometry(0.37, 0.025, 4, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
+  rim.rotation.z = Math.PI / 8;
+  rim.position.set(0, 2.4, 0.03);
+  g.add(pole, face, rim);
   return g;
 }
 
@@ -160,8 +238,15 @@ export function createCar3d(canvas, { theme = 'light', color = '#eef0f3' } = {})
   // Pools of things around you, reused frame to frame.
   const pools = {
     car: Array.from({ length: 8 }, () => buildOther(mats.other)),
+    truck: Array.from({ length: 3 }, () => buildTruck(mats.other)),
+    bus: Array.from({ length: 2 }, () => buildBoxVehicle(mats.other, [2.55, 3.1, 11])),
+    tram: Array.from({ length: 1 }, () => buildBoxVehicle(mats.other, [2.4, 3.4, 16])),
+    motorcycle: Array.from({ length: 3 }, () => buildTwoWheeler(mats.other, mats.person, true)),
+    bicycle: Array.from({ length: 3 }, () => buildTwoWheeler(mats.other, mats.person, false)),
     person: Array.from({ length: 6 }, () => buildPerson(mats.person)),
+    animal: Array.from({ length: 3 }, () => buildAnimal(mats.person)),
     light: Array.from({ length: 3 }, buildLight),
+    stop: Array.from({ length: 2 }, buildStopSign),
   };
   for (const list of Object.values(pools)) {
     for (const o of list) {

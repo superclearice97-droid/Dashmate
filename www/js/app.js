@@ -8,6 +8,7 @@ import { NavRoute } from './core/route.js';
 import { SpeedWatcher, GreenLightWatcher } from './core/alerts.js';
 import { isDaytime } from './core/sun.js';
 import { toScene, guessGear } from './core/scene.js';
+import { summarize } from './core/vision-math.js';
 import { startDeviceGps, startDemo, stopDemo, demoRunning, demoRoute, DEMO_LINE } from './location.js';
 import * as mapView from './map.js';
 import { searchPlaces, fetchRoute, fetchRoad, fetchTemperature } from './services.js';
@@ -225,10 +226,8 @@ function handleVision(v) {
     car3d?.setObjects([]);
     return;
   }
-  const c = v.counts;
-  const html = `<span class="chip"><i class="dot"></i>${c.car} car${c.car === 1 ? '' : 's'}</span>`
-    + `<span class="chip"><i class="dot" style="background:#f59e0b"></i>${c.person} ${c.person === 1 ? 'person' : 'people'}</span>`
-    + `<span class="chip"><i class="dot" style="background:#22c55e"></i>${c.light} light${c.light === 1 ? '' : 's'}</span>`;
+  const parts = summarize(v.counts);
+  const html = (parts.length ? parts : ['Nothing spotted']).map((t) => `<span class="chip">${esc(t)}</span>`).join('');
   chips.innerHTML = html;
   camChips.innerHTML = html;
   car3d?.setObjects(toScene(v.boxes, v.aspect));
@@ -630,7 +629,7 @@ function openSettings() {
     <div class="row-btns"><button class="btn" data-demo>${demoRunning() ? 'Stop demo drive' : 'Start demo drive'}</button></div>
     <h3>About</h3>
     <div class="row-btns"><button class="btn" data-legal="privacy">Privacy</button><button class="btn" data-legal="terms">Terms &amp; safety</button><button class="btn" data-legal="licenses">Licenses</button></div>
-    <p class="muted small">DashMate 0.2.0 · free and open source (MIT)</p>`, (card) => {
+    <p class="muted small">DashMate 0.3.0 · free and open source (MIT)</p>`, (card) => {
     bindFields(card);
     card.addEventListener('click', async (e) => {
       const c = e.target.closest('[data-color]');

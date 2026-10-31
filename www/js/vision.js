@@ -2,9 +2,14 @@
 // with the YOLOX-Nano model, entirely on this device. No image ever leaves it.
 import { emit } from './bus.js';
 import { openCamera, closeCamera, loadScript, containRect } from './camera.js';
-import { INPUT, letterbox, toTensor, decode, nms, kindOf, countKinds, mainLight, lightColor } from './core/vision-math.js';
+import { INPUT, letterbox, toTensor, decode, nms, kindOf, countKinds, mainLight, lightColor, labelOf } from './core/vision-math.js';
 
-const COLORS = { car: '#3b82f6', person: '#f59e0b', light: '#22c55e', stop: '#ef4444' };
+// Box colour per kind: vehicles blue, bikes cyan, people orange, animals purple, signs red.
+const COLORS = {
+  car: '#3b82f6', truck: '#3b82f6', bus: '#3b82f6', tram: '#3b82f6', motorcycle: '#06b6d4', bicycle: '#06b6d4',
+  person: '#f59e0b', animal: '#a855f7', light: '#22c55e', stop: '#ef4444',
+};
+const LIGHT_COLORS = { red: '#ef4444', yellow: '#eab308', green: '#22c55e' };
 let session = null;
 let running = false;
 let timer = null;
@@ -108,29 +113,44 @@ async function detectOnce() {
   const main = mainLight(lights, vw, vh);
   // Positions for the 3D view, as fractions of the frame.
   const r3 = (v) => Math.round(v * 1000) / 1000;
-  const scene = boxes.filter((b) => ['car', 'person', 'light'].includes(b.kind)).slice(0, 20)
+  const scene = boxes.filter((b) => b.kind).slice(0, 24)
     .map((b) => ({ k: b.kind, b: [r3(b.x1 / vw), r3(b.y1 / vh), r3(b.x2 / vw), r3(b.y2 / vh)], c: b.color ?? null }));
 
-  draw(overlay, video, boxes);
+  drawBoxes(overlay, containRect(video), boxes);
   emit('vision', { counts: countKinds(boxes), light: main?.color ?? null, boxes: scene, aspect: vw / vh });
 }
 
-function draw(canvas, video, boxes) {
+// Draws each detection with its label, e.g. "Truck 82%" or "Red light". rect maps
+// frame pixels to the canvas: {x, y, s}.
+export function drawBoxes(canvas, rect, boxes) {
   const dpr = window.devicePixelRatio || 1;
   canvas.width = canvas.clientWidth * dpr;
   canvas.height = canvas.clientHeight * dpr;
   const ctx = canvas.getContext('2d');
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  const r = containRect(video);
   ctx.lineWidth = 2.5;
+  ctx.font = '600 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+  ctx.textBaseline = 'middle';
   for (const b of boxes) {
     if (!b.kind) continue;
-    ctx.strokeStyle = b.kind === 'light' && b.color === 'red' ? '#ef4444' : COLORS[b.kind];
-    const x = r.x + b.x1 * r.s;
-    const y = r.y + b.y1 * r.s;
+    const color = b.kind === 'light' ? LIGHT_COLORS[b.color] ?? COLORS.light : COLORS[b.kind];
+    const x = rect.x + b.x1 * rect.s;
+    const y = rect.y + b.y1 * rect.s;
+    const w = (b.x2 - b.x1) * rect.s;
+    const h = (b.y2 - b.y1) * rect.s;
+    ctx.strokeStyle = color;
     ctx.beginPath();
-    ctx.roundRect(x, y, (b.x2 - b.x1) * r.s, (b.y2 - b.y1) * r.s, 6);
+    ctx.roundRect(x, y, w, h, 6);
     ctx.stroke();
+    const text = `${labelOf(b)} ${Math.round(b.score * 100)}%`;
+    const tw = ctx.measureText(text).width + 10;
+    const ty = y > 20 ? y - 19 : y + h + 2;
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.roundRect(x - 1.25, ty, tw, 17, 4);
+    ctx.fill();
+    ctx.fillStyle = '#fff';
+    ctx.fillText(text, x + 4, ty + 9);
   }
 }

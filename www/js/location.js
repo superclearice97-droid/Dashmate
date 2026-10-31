@@ -5,6 +5,7 @@
 import { emit, on } from './bus.js';
 import { cumulative, pointAt, distance } from './core/geo.js';
 import { boxFor } from './core/scene.js';
+import { countKinds } from './core/vision-math.js';
 
 const REMOTE_FRESH_MS = 5000;
 let watchId = null;
@@ -114,14 +115,14 @@ function demoView(along, stopAt, speed, light, t) {
   boxes.push(boxFor('car', 0, gap));
   boxes.push(boxFor('car', 3.6, 28 + 8 * Math.sin(t / 7)));
   boxes.push(boxFor('car', -3.6, 45 + 10 * Math.cos(t / 9)));
+  boxes.push(boxFor('truck', -3.6, 22 + 6 * Math.sin(t / 11)));
+  boxes.push(boxFor('bicycle', 4.6, 18 + 5 * Math.cos(t / 6)));
   if (light) {
     boxes.push(boxFor('light', 0.8, gap + 9, light));
     boxes.push(boxFor('person', -7 + ((t * 1.3) % 14), gap + 3));
     boxes.push(boxFor('person', 6.5, gap + 5));
   }
-  const counts = { car: 0, person: 0, light: 0 };
-  for (const b of boxes) counts[b.k]++;
-  return { light, counts, boxes, aspect: 16 / 9 };
+  return { light, counts: countKinds(boxes), boxes, aspect: 16 / 9 };
 }
 
 function headingOf(a, b) {

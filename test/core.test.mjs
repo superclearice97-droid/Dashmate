@@ -174,4 +174,10 @@ test('alerts: green light while stopped', () => {
 
   g = new GreenLightWatcher();
   assert.deepEqual(feed([['red', 0, 0], ['red', 0, 1500], ['red', 5, 1700], ['green', 0, 1900], ['green', 0, 2000]]), [null, null, null, null, null], 'driving resets');
+
+  // Detailed mode updates only every few seconds; the alert must still fire.
+  g = new GreenLightWatcher();
+  assert.deepEqual(feed([['red', 0, 0], ['red', 0, 3000], ['green', 0, 6000], ['green', 0, 9000]]), [null, null, null, 'go'], 'slow frames');
+  g = new GreenLightWatcher();
+  assert.deepEqual(feed([['red', 0, 0], ['red', 0, 3000], ['green', 0, 9500], ['green', 0, 12500]]), [null, null, null, null], 'red seen too long ago');
 });

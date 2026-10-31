@@ -34,7 +34,7 @@ const STOPPED_MPS = 1.3;  // ~3 mph
 const MOVING_MPS = 2.5;   // ~5.6 mph
 
 // Watches the traffic light in front while the car is stopped. Fires once when a light
-// that was red for at least 1 s turns green (seen in two consecutive frames).
+// that was red for at least 1 s turns green (seen in two frames in a row).
 export class GreenLightWatcher {
   constructor() {
     this.reset();
@@ -44,6 +44,7 @@ export class GreenLightWatcher {
     this.redSince = null;
     this.lastRed = null;
     this.greens = 0;
+    this.firstGreen = null;
   }
 
   // light: 'red' | 'yellow' | 'green' | null. Returns 'go' or null.
@@ -59,7 +60,11 @@ export class GreenLightWatcher {
       this.greens = 0;
       return null;
     }
-    if (light === 'green' && this.redSince != null && this.lastRed - this.redSince >= 1000 && t - this.lastRed < 4000) {
+    // The first green must come soon after the red; the next just has to follow it
+    // (frames can be seconds apart in Detailed mode).
+    const fresh = this.greens === 0 ? t - this.lastRed < 4000 : t - this.firstGreen < 10000;
+    if (light === 'green' && this.redSince != null && this.lastRed - this.redSince >= 1000 && fresh) {
+      if (this.greens === 0) this.firstGreen = t;
       this.greens++;
       if (this.greens >= 2) {
         this.reset();

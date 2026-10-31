@@ -135,5 +135,6 @@ export function toggle3d() {
   return pitched;
 }
 
+export const is3d = () => pitched;
 export const zoomBy = (d) => map?.zoomTo(map.getZoom() + d, { duration: 250 });
 export const resizeMap = () => map?.resize();

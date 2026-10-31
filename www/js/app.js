@@ -5,7 +5,9 @@ import { speedValue, speedUnit, formatDistance, distanceText, spokenDistance, fo
 import { distance } from './core/geo.js';
 import { TripTracker } from './core/trip.js';
 import { NavRoute } from './core/route.js';
-import { SpeedWatcher, GreenLightWatcher } from './core/alerts.js';
+import { SpeedWatcher, GreenLightWatcher, warningEffects } from './core/alerts.js';
+import { TripLog } from './core/trips.js';
+import { initControls, openControls, closeControls, refreshControls, seg, bindFields, onlineFields } from './controls.js';
 import { isDaytime } from './core/sun.js';
 import { toScene, guessGear } from './core/scene.js';
 import { summarize } from './core/vision-math.js';
@@ -41,6 +43,7 @@ let roadQuery = { pos: null, t: 0, busy: false };
 let slowActive = false;
 let goTimer = null;
 let lastMovingAt = 0;
+let lastControlsRefresh = 0;
 
 // ---------------------------------------------------------------- layout & theme
 function layout() {
@@ -112,7 +115,7 @@ document.addEventListener('click', (e) => {
   if (e.target.closest('[data-close]')) closeSheet();
 });
 
-const clockText = (d = new Date()) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+const clockText = (d = new Date()) => d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: !settings.time24 });
 function tickClock() {
   $('#clock').textContent = clockText();
   $('#dock-clock').textContent = clockText().replace(/\s?[AP]M$/i, '');
@@ -141,6 +144,11 @@ on('fix', (fix) => {
   const label = { device: 'GPS · This device', phone: 'GPS · Phone', demo: 'Demo drive' }[fix.source] || 'GPS';
   $('#gps-chip').innerHTML = `<i class="dot" style="background:${fix.accuracy > 50 ? '#f59e0b' : '#22c55e'}"></i>${label}`;
 
+  updateTrips();
+  if (Date.now() - lastControlsRefresh > 2000) {
+    lastControlsRefresh = Date.now();
+    refreshControls();
+  }
   car3d?.setSpeed(snap.speed);
   mapView.updatePosition(pos, snap.heading, snap.speed);
   updateNav(pos, fix.accuracy);
@@ -189,8 +197,9 @@ function renderRoad() {
 
 function checkSpeed() {
   const tol = settings.overBy * (settings.units === 'imperial' ? 1.609344 : 1);
-  const r = speedWatch.update(snap.speed * MPS_TO_KMH, road.maxspeed, tol, Date.now());
-  if (r.entered) chime('warn');
+  const fx = warningEffects(settings.speedWarn);
+  const r = speedWatch.update(snap.speed * MPS_TO_KMH, fx.show ? road.maxspeed : null, tol, Date.now());
+  if (r.entered && fx.chime) chime('warn');
   if (r.active !== slowActive) {
     slowActive = r.active;
     renderRoad();
@@ -231,7 +240,7 @@ function handleVision(v) {
   chips.innerHTML = html;
   camChips.innerHTML = html;
   car3d?.setObjects(toScene(v.boxes, v.aspect));
-  if (greenWatch.update(v.light, snap.speed, Date.now()) === 'go') {
+  if (greenWatch.update(v.light, snap.speed, Date.now()) === 'go' && settings.greenChime) {
     goActive = true;
     chime('go');
     renderAlert();
@@ -323,7 +332,7 @@ async function reroute(pos) {
   rerouting = true;
   lastReroute = Date.now();
   try {
-    const r = await fetchRoute(pos, navDest.coord);
+    const r = await fetchRoute(pos, navDest.coord, settings.avoid);
     nav = new NavRoute(r, navDest.coord);
     mapView.showRoute(nav.line);
     speak('Rerouting');
@@ -341,12 +350,13 @@ async function startNavigation(dest) {
   }
   toast('Finding the best route…', 8000);
   try {
-    const r = await fetchRoute(snap.pos, dest.coord);
+    const r = await fetchRoute(snap.pos, dest.coord, settings.avoid);
     navDest = dest;
     nav = new NavRoute(r, dest.coord);
     mapView.showRoute(nav.line);
     mapView.overview(nav.line);
-    $('#toast').hidden = true;
+    if (r.avoidIgnored) toast('The route server couldn’t avoid what you asked on this trip, so this is the normal route.', 6000);
+    else $('#toast').hidden = true;
     updateNav(snap.pos, lastFix?.accuracy);
     speak(nav.steps[1] ? `Starting route to ${dest.title}` : '');
   } catch (e) {
@@ -386,7 +396,7 @@ function openSearch() {
   if (!settings.online.nav) {
     openSheet(`${head('Where to?')}<p>Directions are turned off. They need the internet: your search text and route go to free OpenStreetMap services.</p>
       <div class="row-btns"><button class="btn primary" data-go-settings>Open Controls</button></div>`, (card) => {
-      $('[data-go-settings]', card).onclick = openSettings;
+      $('[data-go-settings]', card).onclick = () => { closeSheet(); openControls('privacy'); };
     });
     return;
   }
@@ -575,103 +585,74 @@ on('link', (s) => {
   }
 });
 
-// ---------------------------------------------------------------- settings
-function seg(name, value, options) {
-  return `<span class="seg" data-seg="${name}">${options.map(([v, l]) => `<button type="button" data-v="${v}" class="${String(v) === String(value) ? 'on' : ''}">${l}</button>`).join('')}</span>`;
+// ---------------------------------------------------------------- controls (settings)
+const VERSION = '0.5.0';
+const TRIPS_KEY = 'dashmate.trips.v1';
+let tripLog;
+try { tripLog = new TripLog(JSON.parse(localStorage.getItem(TRIPS_KEY) || 'null')); } catch { tripLog = new TripLog(); }
+const appStart = Date.now();
+let tripMark = { distance: 0, movingTime: 0 };
+let tripsSavedAt = 0;
+function saveTrips() {
+  try { localStorage.setItem(TRIPS_KEY, JSON.stringify(tripLog)); } catch { /* storage blocked */ }
+  tripsSavedAt = Date.now();
 }
-function sw(name, checked) {
-  return `<input type="checkbox" class="switch" data-sw="${name}" ${checked ? 'checked' : ''}>`;
-}
-const COLORS = ['#eef0f3', '#1c1d21', '#c8102e', '#2a5bd7', '#7a8592', '#0f6b4f'];
+document.addEventListener('visibilitychange', () => document.hidden && saveTrips());
 
-function onlineFields() {
-  const o = settings.online;
-  return `
-    <div class="field"><span>Map<small>Map pieces from OpenFreeMap</small></span>${sw('online.map', o.map)}</div>
-    <div class="field"><span>Directions &amp; search<small>Search text and route to Photon and OSRM (FOSSGIS)</small></span>${sw('online.nav', o.nav)}</div>
-    <div class="field"><span>Speed limits &amp; street names<small>Your position to the Overpass API</small></span>${sw('online.limits', o.limits)}</div>
-    <div class="field"><span>Outside temperature<small>Your area (~10 km) to Open-Meteo</small></span>${sw('online.weather', o.weather)}</div>`;
-}
-
-function bindFields(card) {
-  card.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-seg] button');
-    if (!b) return;
-    const name = b.closest('[data-seg]').dataset.seg;
-    const v = name === 'overBy' || name === 'volume' ? Number(b.dataset.v) : b.dataset.v;
-    $$('button', b.parentElement).forEach((x) => x.classList.toggle('on', x === b));
-    saveSettings({ [name]: v });
-  });
-  card.addEventListener('change', (e) => {
-    const el = e.target.closest('[data-sw]');
-    if (!el) return;
-    const [a, k] = el.dataset.sw.split('.');
-    if (k) saveSettings({ [a]: { ...settings[a], [k]: el.checked } });
-    else saveSettings({ [a]: el.checked });
-  });
+// Feed Trip A/B with what was driven since the last fix.
+function updateTrips() {
+  tripLog.add(snap.distance - tripMark.distance, snap.movingTime - tripMark.movingTime, snap.speed);
+  tripMark = { distance: snap.distance, movingTime: snap.movingTime };
+  if (Date.now() - tripsSavedAt > 20000) saveTrips();
 }
 
-function openSettings() {
-  const u = settings.units;
-  const per = u === 'imperial' ? 1609.344 : 1000;
-  openSheet(`${head('Controls')}
-    <h3>Trip</h3>
-    <div class="trip-row">
-      <div><b>${(snap.distance / per).toFixed(1)}</b><small>${u === 'imperial' ? 'mi' : 'km'}</small><span>Distance</span></div>
-      <div><b>${speedValue(snap.avgSpeed, u)}</b><small>${speedUnit(u).toLowerCase()}</small><span>Average</span></div>
-      <div><b>${speedValue(snap.maxSpeed, u)}</b><small>${speedUnit(u).toLowerCase()}</small><span>Top speed</span></div>
-    </div>
-    <div class="row-btns"><button class="btn" data-reset-trip>Reset trip</button></div>
-    <h3>Display</h3>
-    <div class="field"><span>Units</span>${seg('units', settings.units, [['imperial', 'mph'], ['metric', 'km/h']])}</div>
-    <div class="field"><span>Look<small>Auto switches to dark at sunset where you are</small></span>${seg('theme', settings.theme, [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']])}</div>
-    <div class="field"><span>Car color</span><span class="swatches">${COLORS.map((c) => `<button data-color="${c}" style="background:${c}" class="${c === settings.carColor ? 'on' : ''}" aria-label="Car color ${c}"></button>`).join('')}</span></div>
-    <div class="field"><span>Spoken directions</span>${sw('voice', settings.voice)}</div>
-    <div class="field"><span>Alert sounds</span>${sw('chimes', settings.chimes)}</div>
-    <div class="field"><span>“Slow down” when over by<small>Compared with the speed limit from OpenStreetMap</small></span>${seg('overBy', settings.overBy, [[0, '0'], [5, '5'], [10, '10']])}</div>
-    <h3>Sound</h3>
-    <div class="field"><span>Volume<small>Music and spoken directions in DashMate</small></span>${seg('volume', settings.volume, [[0.3, 'Low'], [0.6, 'Medium'], [1, 'High']])}</div>
-    <h3>Online features</h3>${onlineFields()}
-    <h3>Music</h3>
-    <div class="field"><span>Remember my songs<small>Kept only on this device</small></span>${sw('rememberMusic', settings.rememberMusic)}</div>
-    <div class="row-btns"><button class="btn" data-forget>Forget my songs</button></div>
-    <h3>Try it</h3>
-    <div class="row-btns"><button class="btn" data-demo>${demoRunning() ? 'Stop demo drive' : 'Start demo drive'}</button></div>
-    <h3>About</h3>
-    <div class="row-btns"><button class="btn" data-legal="privacy">Privacy</button><button class="btn" data-legal="terms">Terms &amp; safety</button><button class="btn" data-legal="licenses">Licenses</button></div>
-    <p class="muted small">DashMate 0.4.0 · free and open source (MIT)</p>`, (card) => {
-    bindFields(card);
-    card.addEventListener('click', async (e) => {
-      const c = e.target.closest('[data-color]');
-      if (c) {
-        saveSettings({ carColor: c.dataset.color });
-        $$('[data-color]', card).forEach((x) => x.classList.toggle('on', x === c));
-      }
-      if (e.target.closest('[data-reset-trip]')) {
+function openUrl(url) {
+  if (isNative()) window.location.href = url;
+  else window.open(url, '_blank', 'noopener');
+}
+
+initControls({
+  version: VERSION,
+  vision: {
+    running: visionRunning,
+    async toggle() {
+      if (visionRunning()) return stopVision();
+      closeControls();
+      setTab('camera');
+      return startVision($('#cam-video'), $('#cam-overlay'));
+    },
+  },
+  map: { is3d: mapView.is3d, toggle3d: mapView.toggle3d },
+  pairing: { role: linkRole, open: openPair },
+  demo: { running: demoRunning, toggle: () => (demoRunning() ? stopDemo() : startDemo()) },
+  trips: {
+    log: tripLog,
+    current: () => ({ distance: snap.distance, movingTime: snap.movingTime, avgSpeed: snap.avgSpeed, maxSpeed: snap.maxSpeed, since: appStart }),
+    reset(id) {
+      if (id === 'current') {
         trip.reset();
-        openSettings();
-        return;
+        snap = trip.snapshot();
+        tripMark = { distance: 0, movingTime: 0 };
+      } else {
+        tripLog.reset(id);
+        saveTrips();
       }
-      if (e.target.closest('[data-forget]')) {
-        await music.forgetAllMusic();
-        toast('Stored songs removed from this device');
-      }
-      if (e.target.closest('[data-demo]')) {
-        closeSheet();
-        if (demoRunning()) stopDemo();
-        else startDemo();
-      }
-      const l = e.target.closest('[data-legal]');
-      if (l) openLegal(l.dataset.legal);
-    });
-  });
-}
+    },
+  },
+  openApps,
+  openLegal,
+  openUrl,
+  toast,
+  forgetSongs: () => music.forgetAllMusic(),
+  resetSettings() {
+    try { localStorage.setItem('dashmate.settings.v1', JSON.stringify({ acceptedTerms: settings.acceptedTerms })); } catch { /* ignore */ }
+    location.reload();
+  },
+});
 
 function openLegal(which) {
   const body = { privacy: PRIVACY, terms: TERMS, licenses: LICENSES }[which];
-  openSheet(`<div class="sheet-head"><span></span><button class="icon" data-back aria-label="Back"><svg><use href="#i-close"/></svg></button></div><div class="legal">${body}</div>`, (card) => {
-    $('[data-back]', card).onclick = openSettings;
-  });
+  openSheet(`<div class="sheet-head"><span></span><button class="icon" data-close aria-label="Close"><svg><use href="#i-close"/></svg></button></div><div class="legal">${body}</div>`);
 }
 
 let lastSettings = JSON.stringify(settings);
@@ -729,7 +710,7 @@ document.addEventListener('click', (e) => {
   const act = e.target.closest('[data-act]')?.dataset.act;
   switch (act) {
     case 'search': return openSearch();
-    case 'settings': return openSettings();
+    case 'settings': return openControls();
     case 'pair': return openPair();
     case 'apps': return openApps();
     case 'close-tab': return setTab('dash');

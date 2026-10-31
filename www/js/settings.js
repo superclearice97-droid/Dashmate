@@ -12,6 +12,10 @@ const DEFAULTS = {
   voice: true,              // spoken directions
   chimes: true,             // alert sounds
   detail: 'fast',           // road reading: fast | detailed
+  speedWarn: 'chime',       // speed limit warning: off | display | chime
+  greenChime: true,         // chime when the light ahead turns green while stopped
+  time24: false,            // 24-hour clock
+  avoid: { tolls: false, highways: false, ferries: false },
   overBy: 5,                // "Slow down" when this much over the limit (in the user's units)
   rememberMusic: true,      // keep added songs on this device
   online: {                 // every feature that talks to the internet can be switched off
@@ -26,7 +30,7 @@ const DEFAULTS = {
 function load() {
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) || '{}');
-    return { ...DEFAULTS, ...saved, online: { ...DEFAULTS.online, ...(saved.online || {}) } };
+    return { ...DEFAULTS, ...saved, online: { ...DEFAULTS.online, ...(saved.online || {}) }, avoid: { ...DEFAULTS.avoid, ...(saved.avoid || {}) } };
   } catch {
     return structuredClone(DEFAULTS);
   }

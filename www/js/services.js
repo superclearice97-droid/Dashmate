@@ -39,11 +39,20 @@ export async function searchPlaces(text, near) {
 }
 
 // Driving route (OSRM on the FOSSGIS server). Sent: start and destination.
-export async function fetchRoute(from, to) {
+// avoid: {tolls, highways, ferries}. If the server can't honour them, the normal route is
+// returned with avoidIgnored set, so the app can say so.
+export async function fetchRoute(from, to, avoid = {}) {
   need('nav', 'Directions & search');
+  const wants = Object.values(avoid).some(Boolean);
+  if (wants) {
+    try {
+      const data = await getJson(osrmUrl(from, to, avoid), {}, 15000);
+      if (data.code === 'Ok' && data.routes?.length) return data.routes[0];
+    } catch { /* fall through to the normal route */ }
+  }
   const data = await getJson(osrmUrl(from, to), {}, 15000);
   if (data.code !== 'Ok' || !data.routes?.length) throw new Error('No route found');
-  return data.routes[0];
+  return wants ? { ...data.routes[0], avoidIgnored: true } : data.routes[0];
 }
 
 // Speed limit and street name (Overpass API, OpenStreetMap). Sent: your current position.

@@ -36,6 +36,10 @@
       <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 3h2v18H5V3Zm3 1h11l-2.5 4L19 12H8V4Z"/></symbol>
       <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15.4 5.4-1.4-1.4-8 8 8 8 1.4-1.4L8.8 12z"/></symbol>
       <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m8.6 5.4 1.4-1.4 8 8-8 8-1.4-1.4 6.6-6.6z"/></symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24"><path d="M12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10Zm-1-6h2v3h-2V1Zm0 19h2v3h-2v-3ZM1 11h3v2H1v-2Zm19 0h3v2h-3v-2ZM4.2 2.8l2.1 2.1-1.4 1.4-2.1-2.1 1.4-1.4Zm13.5 13.5 2.1 2.1-1.4 1.4-2.1-2.1 1.4-1.4ZM2.8 19.8l2.1-2.1 1.4 1.4-2.1 2.1-1.4-1.4ZM16.3 6.3l2.1-2.1 1.4 1.4-2.1 2.1-1.4-1.4Z"/></symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M14.5 2.5A9.5 9.5 0 1 0 21.5 17 8 8 0 0 1 14.5 2.5Z"/></symbol>
+      <symbol id="i-lock" viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v3h6V7a3 3 0 0 0-3-3Z"/></symbol>
+      <symbol id="i-info" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm-1 8v7h2v-7h-2Zm0-3v2h2V7h-2Z"/></symbol>
       <symbol id="i-round" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 7 7h-2.5A4.5 4.5 0 1 1 12 7.5V5Zm0-3v8l4-4-4-4Z"/></symbol>
     </defs>
   </svg>
@@ -149,6 +153,15 @@
         <div class="bar"><i data-m-bar></i></div>
       </div>
     </main>
+
+    <!-- Controls (settings), over the map like an EV's controls screen -->
+    <section id="controls" class="controls" hidden aria-label="Controls">
+      <div class="ctl-head">
+        <label class="ctl-search"><svg><use href="#i-search"/></svg><input id="ctl-search" type="search" placeholder="Search settings" autocomplete="off" aria-label="Search settings"></label>
+        <button class="icon" data-ctl-close aria-label="Close controls"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div class="ctl-body"><nav class="ctl-nav" aria-label="Settings categories"></nav><div class="ctl-content"></div></div>
+    </section>
 
     <!-- Bottom bar (tablet) / side or bottom tabs (phone) -->
     <nav id="dock" aria-label="Main">

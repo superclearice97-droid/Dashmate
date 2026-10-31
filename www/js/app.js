@@ -720,8 +720,10 @@ document.addEventListener('click', (e) => {
 // ---------------------------------------------------------------- keep the screen on
 async function keepAwake() {
   try {
-    const plugin = window.Capacitor?.Plugins?.KeepAwake;
-    if (plugin) return await plugin.keepAwake();
+    if (isNative()) {
+      const plugin = window.Capacitor.registerPlugin?.('KeepAwake') ?? window.Capacitor.Plugins?.KeepAwake;
+      if (plugin) return await plugin.keepAwake();
+    }
     if ('wakeLock' in navigator) {
       const lock = () => navigator.wakeLock.request('screen').catch(() => {});
       await lock();

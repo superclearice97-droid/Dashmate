@@ -1,5 +1,10 @@
 // Driver alerts: "Slow down" (over the limit) and "Green · go" (light turned green while stopped).
 
+// What a Speed Limit Warning setting does: 'off' (nothing), 'display' (banner), 'chime' (banner + sound).
+export function warningEffects(mode) {
+  return { show: mode === 'display' || mode === 'chime', chime: mode === 'chime' };
+}
+
 // Over the posted limit by more than `toleranceKmh` for at least 2 s.
 export class SpeedWatcher {
   constructor() {

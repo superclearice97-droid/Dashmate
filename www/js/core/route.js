@@ -132,7 +132,10 @@ export class NavRoute {
   }
 }
 
-export function osrmUrl(from, to) {
+// avoid: {tolls, highways, ferries} -> OSRM's exclude classes.
+export function osrmUrl(from, to, avoid = {}) {
   const c = `${from[0].toFixed(6)},${from[1].toFixed(6)};${to[0].toFixed(6)},${to[1].toFixed(6)}`;
-  return `https://routing.openstreetmap.de/routed-car/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true`;
+  const exclude = [avoid.tolls && 'toll', avoid.highways && 'motorway', avoid.ferries && 'ferry'].filter(Boolean);
+  const ex = exclude.length ? `&exclude=${exclude.join(',')}` : '';
+  return `https://routing.openstreetmap.de/routed-car/route/v1/driving/${c}?overview=full&geometries=geojson&steps=true${ex}`;
 }

@@ -59,6 +59,7 @@ export class TripTracker {
       speed: this.speed,
       heading: this.heading,
       distance: this.distance,
+      movingTime: this.movingTime,
       avgSpeed: this.movingTime > 0 ? this.distance / this.movingTime : 0,
       maxSpeed: this.maxSpeed,
     };

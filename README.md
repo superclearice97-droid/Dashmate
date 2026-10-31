@@ -27,7 +27,7 @@ Step-by-step install instructions: [docs/INSTALL.md](docs/INSTALL.md).
 | iPad and phone layouts, light/dark, demo drive, settings, music panel, pairing screens | Checked in a desktop browser at iPad and iPhone sizes |
 | Live map tiles, routing, search, speed limits from the internet | Built to each service's public API; not tried on a real drive yet |
 | **Phone ⇄ iPad pairing** | **Experimental**: not yet tried on real devices |
-| **Road reading (camera)** | **Experimental**: not yet tried on real devices; not a safety system |
+| **Road reading (camera)** | **Experimental**: detection and light colour checked on street-video frames (~90 ms/frame in a desktop browser); not yet tried on real devices; misses small, distant lights; not a safety system |
 
 ## How it's built
 

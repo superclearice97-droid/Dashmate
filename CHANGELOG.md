@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0 — 2026-10-31
+
+- Road reading has a **Detail** switch: Fast (YOLOX-Nano, as before) or Detailed (YOLOX-S, 640 px), which spots smaller and farther objects but updates about once a second. The panel shows how often it is updating. The app is about 36 MB bigger because the larger model is built in, so it works offline.
+- Fixed: the "Green · go" alert could not fire when updates are seconds apart; it now does (regression test added).
+
 ## 0.3.0 — 2026-10-31
 
 - Road reading identifies more street objects with the same on-device model: trucks, buses, motorcycles, bicycles, trams/trains, dogs, cats, horses and stop signs, as well as cars, people and traffic lights (experimental).

@@ -1,7 +1,7 @@
 # Third-party notices
 
 DashMate's own code is MIT-licensed (see LICENSE). The app bundles the components below.
-Versions are pinned in `package.json`; the model is pinned by SHA-256 in `scripts/vendor.mjs`.
+Versions are pinned in `package.json`; the models are pinned by SHA-256 in `scripts/vendor.mjs`.
 
 | Component | Version | License | Source |
 |---|---|---|---|
@@ -9,6 +9,7 @@ Versions are pinned in `package.json`; the model is pinned by SHA-256 in `script
 | three.js | 0.180.0 (r180) | MIT | https://github.com/mrdoob/three.js |
 | ONNX Runtime Web | 1.22.0 | MIT | https://github.com/microsoft/onnxruntime |
 | YOLOX-Nano model (yolox_nano.onnx) | 0.1.1rc0 | Apache-2.0 | https://github.com/Megvii-BaseDetection/YOLOX |
+| YOLOX-S model (yolox_s.onnx) | 0.1.1rc0 | Apache-2.0 | https://github.com/Megvii-BaseDetection/YOLOX |
 | jsQR | 1.4.0 | Apache-2.0 | https://github.com/cozmo/jsQR |
 | QR Code Generator | 2.0.4 | MIT | https://github.com/kazuhikoarase/qrcode-generator |
 | Capacitor (core, android, ios) | 8.5.3 | MIT | https://github.com/ionic-team/capacitor |
@@ -270,7 +271,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## jsQR (© Cosmo Wolfe) and YOLOX-Nano (© Megvii Inc.) — Apache License 2.0
+## jsQR (© Cosmo Wolfe) and YOLOX-Nano / YOLOX-S (© Megvii Inc.) — Apache License 2.0
 
 ```
 Apache License

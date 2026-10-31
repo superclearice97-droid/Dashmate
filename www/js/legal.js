@@ -61,7 +61,7 @@ export const LICENSES = `
   <li><b>MapLibre GL JS</b> 5.23.0 — BSD-3-Clause, © MapLibre contributors, © Mapbox</li>
   <li><b>three.js</b> r180 — MIT, © three.js authors</li>
   <li><b>ONNX Runtime Web</b> 1.22.0 — MIT, © Microsoft Corporation</li>
-  <li><b>YOLOX-Nano model</b> — Apache-2.0, © Megvii Inc.</li>
+  <li><b>YOLOX-Nano and YOLOX-S models</b> — Apache-2.0, © Megvii Inc.</li>
   <li><b>jsQR</b> 1.4.0 — Apache-2.0, © Cosmo Wolfe</li>
   <li><b>QR Code Generator</b> 2.0.4 — MIT, © Kazuhiko Arase. "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.</li>
   <li><b>Capacitor</b> 8.5.3 — MIT, © Ionic</li>

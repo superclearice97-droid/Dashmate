@@ -12,7 +12,7 @@ A car dashboard for the device you already have. Mount an iPad, iPhone or Androi
 - **Trip numbers** (distance, average and top speed) under the car button › Controls.
 - **Drive Mode on phones**: works upright or sideways.
 - **Phone as the GPS** for a Wi-Fi-only iPad (experimental): pair once with two QR codes and the iPad uses the phone's location.
-- **Road reading** (experimental): the phone's camera identifies street objects on the device and labels them: **cars, trucks, buses, motorcycles, bicycles, trams/trains, people, dogs, cats, horses, traffic lights (with their colour) and stop signs**. It tells you when a red light turns green while you're stopped, and draws everything it sees around your car in the 3D view.
+- **Road reading** (experimental): the phone's camera identifies street objects on the device and labels them: **cars, trucks, buses, motorcycles, bicycles, trams/trains, people, dogs, cats, horses, traffic lights (with their colour) and stop signs**. It tells you when a red light turns green while you're stopped, and draws everything it sees around your car in the 3D view. Choose **Fast** (updates several times a second) or **Detailed** (a larger model that spots smaller, farther things but updates about once a second).
 - **Demo drive** (car button › Controls › Try it) to see everything at home.
 
 It is free and open source, has no accounts, ads or analytics, and every online feature can be switched off. See [PRIVACY.md](PRIVACY.md).
@@ -30,7 +30,7 @@ Step-by-step install instructions: [docs/INSTALL.md](docs/INSTALL.md).
 | iPad and phone layouts, light/dark, demo drive (with simulated traffic), turn list, Controls, music panel, pairing screens | Checked in a desktop browser at iPad and iPhone sizes |
 | Live map tiles, routing, search, speed limits from the internet | Built to each service's public API; not tried on a real drive yet |
 | **Phone ⇄ iPad pairing** | **Experimental**: not yet tried on real devices |
-| **Road reading (camera)** | **Experimental**: identification, labels and light colour checked on street-video frames (~90 ms/frame in a desktop browser); not yet tried on real devices; misses small or distant objects and sometimes mistakes a sign or shelter for a car; not a safety system |
+| **Road reading (camera)** | **Experimental**: identification, labels, light colour and Fast/Detailed switching checked end to end with street video fed in as the camera (Fast ~0.3 s, Detailed ~1.2 s per update in a desktop browser; phones are likely slower); not yet tried on real devices; misses small or distant objects and sometimes mistakes a sign or shelter for a car; not a safety system |
 
 ## How it's built
 
@@ -39,7 +39,7 @@ One web app (`www/`) wrapped as native apps with [Capacitor](https://capacitorjs
 - Android: `npx cap add android`, patched by `scripts/patch-native.mjs`, built with Gradle and signed.
 - iOS: `npx cap add ios`, patched, built unsigned with Xcode on a macOS runner, packaged as an `.ipa` for sideloading.
 
-Third-party libraries are installed from npm at the pinned versions in `package.json` and copied in by `scripts/vendor.mjs`; the YOLOX-Nano model is downloaded from the official YOLOX release and checked against a SHA-256 hash. None of these are committed. The icon PNGs in `resources/` are generated from `resources/icon.svg` by `scripts/make-icons.cjs`.
+Third-party libraries are installed from npm at the pinned versions in `package.json` and copied in by `scripts/vendor.mjs`; the YOLOX-Nano and YOLOX-S models are downloaded from the official YOLOX release and checked against SHA-256 hashes. None of these are committed. The icon PNGs in `resources/` are generated from `resources/icon.svg` by `scripts/make-icons.cjs`.
 
 ### Run it on a computer
 

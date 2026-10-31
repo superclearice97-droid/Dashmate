@@ -1,5 +1,9 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.4.0
+- Road reading **Detail** switch: Fast, or Detailed (larger built-in model that spots smaller, farther things; about one update a second). Checked with street video fed in as the camera; not yet tried on real phones (**experimental**)
+- "Green · go" alert now also works when updates are slow
+
 ### New in 0.3.0
 - Road reading now identifies and labels cars, trucks, buses, motorcycles, bicycles, trams/trains, people, dogs, cats, horses, traffic lights (with colour) and stop signs, and draws each in the 3D view (**experimental**: checked on street-video frames, not yet on real devices; misses small or distant objects)
 

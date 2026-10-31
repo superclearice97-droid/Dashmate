@@ -26,12 +26,13 @@ const FILES = [
   ['onnxruntime-web/dist/ort-wasm-simd-threaded.mjs', 'ort/ort-wasm-simd-threaded.mjs'],
 ];
 
-// YOLOX-Nano, Apache-2.0, published by Megvii in the official YOLOX release.
-const MODEL = {
-  url: 'https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/yolox_nano.onnx',
-  sha256: 'c789161ed43c8269fcd4e67c67eeeb4e80c622da2eb296a20bc6007bd18a0b7d',
-  out: 'www/models/yolox_nano.onnx',
-};
+// YOLOX models, Apache-2.0, published by Megvii in the official YOLOX release.
+// Nano powers Fast road reading; S powers Detailed.
+const MODELS = [
+  { name: 'yolox_nano.onnx', sha256: 'c789161ed43c8269fcd4e67c67eeeb4e80c622da2eb296a20bc6007bd18a0b7d' },
+  { name: 'yolox_s.onnx', sha256: 'c5c2d13e59ae883e6af3b45daea64af4833a4951c92d116ec270d9ddbe998063' },
+];
+const RELEASE = 'https://github.com/Megvii-BaseDetection/YOLOX/releases/download/0.1.1rc0/';
 
 let missing = 0;
 for (const [from, to] of FILES) {
@@ -47,26 +48,28 @@ for (const [from, to] of FILES) {
 }
 
 const sha = (buf) => createHash('sha256').update(buf).digest('hex');
-const cached = join(root, '.cache/yolox_nano.onnx');
-let model = existsSync(cached) ? readFileSync(cached) : null;
-if (!model || sha(model) !== MODEL.sha256) {
-  try {
-    const res = await fetch(MODEL.url);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    model = Buffer.from(await res.arrayBuffer());
-    mkdirSync(dirname(cached), { recursive: true });
-    writeFileSync(cached, model);
-  } catch (e) {
-    console.warn(`could not download model: ${e.message}`);
-    model = null;
+for (const m of MODELS) {
+  const cached = join(root, '.cache', m.name);
+  let model = existsSync(cached) ? readFileSync(cached) : null;
+  if (!model || sha(model) !== m.sha256) {
+    try {
+      const res = await fetch(RELEASE + m.name);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      model = Buffer.from(await res.arrayBuffer());
+      mkdirSync(dirname(cached), { recursive: true });
+      writeFileSync(cached, model);
+    } catch (e) {
+      console.warn(`could not download ${m.name}: ${e.message}`);
+      model = null;
+    }
   }
-}
-if (model && sha(model) === MODEL.sha256) {
-  mkdirSync(join(root, 'www/models'), { recursive: true });
-  writeFileSync(join(root, MODEL.out), model);
-} else {
-  console.warn('model missing or checksum mismatch');
-  missing++;
+  if (model && sha(model) === m.sha256) {
+    mkdirSync(join(root, 'www/models'), { recursive: true });
+    writeFileSync(join(root, 'www/models', m.name), model);
+  } else {
+    console.warn(`${m.name} missing or checksum mismatch`);
+    missing++;
+  }
 }
 
 if (missing && strict) {

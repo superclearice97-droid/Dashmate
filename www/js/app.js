@@ -239,7 +239,17 @@ function handleVision(v) {
     goTimer = setTimeout(() => { goActive = false; renderAlert(); }, 4500);
   }
 }
-on('vision', handleVision);
+on('vision', (v) => {
+  handleVision(v);
+  // How often the camera view updates, so the cost of Detailed mode is visible.
+  if (v?.ms && Date.now() - lastSpeedNote > 2000) {
+    lastSpeedNote = Date.now();
+    const every = Math.max(0.25, v.ms / 1000);
+    $('#cam-status').textContent = `${v.mode === 'detailed' ? 'Detailed' : 'Fast'} · updates every ${every.toFixed(1)} s`
+      + (linkRole() === 'phone' ? ' · sent to your paired screen' : '');
+  }
+});
+let lastSpeedNote = 0;
 on('remote-vision', handleVision);
 on('demo-vision', handleVision);
 
@@ -629,7 +639,7 @@ function openSettings() {
     <div class="row-btns"><button class="btn" data-demo>${demoRunning() ? 'Stop demo drive' : 'Start demo drive'}</button></div>
     <h3>About</h3>
     <div class="row-btns"><button class="btn" data-legal="privacy">Privacy</button><button class="btn" data-legal="terms">Terms &amp; safety</button><button class="btn" data-legal="licenses">Licenses</button></div>
-    <p class="muted small">DashMate 0.3.0 · free and open source (MIT)</p>`, (card) => {
+    <p class="muted small">DashMate 0.4.0 · free and open source (MIT)</p>`, (card) => {
     bindFields(card);
     card.addEventListener('click', async (e) => {
       const c = e.target.closest('[data-color]');
@@ -814,6 +824,8 @@ async function boot() {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
   $('#speed-unit').textContent = speedUnit(settings.units);
   music.setVolume(settings.volume);
+  $('#detail-seg').outerHTML = seg('detail', settings.detail, [['fast', 'Fast'], ['detailed', 'Detailed']]);
+  bindFields($('#camera-panel'));
   tickClock();
   setInterval(tickClock, 10000);
   // The 3D view needs WebGL; load it separately so the rest works without it.

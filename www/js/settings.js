@@ -11,6 +11,7 @@ const DEFAULTS = {
   volume: 0.6,              // DashMate's own sounds: music and spoken directions
   voice: true,              // spoken directions
   chimes: true,             // alert sounds
+  detail: 'fast',           // road reading: fast | detailed
   overBy: 5,                // "Slow down" when this much over the limit (in the user's units)
   rememberMusic: true,      // keep added songs on this device
   online: {                 // every feature that talks to the internet can be switched off

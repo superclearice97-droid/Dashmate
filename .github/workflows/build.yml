@@ -1,0 +1,129 @@
+name: Build apps
+
+# Every push to main: run the tests, build the Android APK and the iPad/iPhone app,
+# and publish both as downloads on a new GitHub Release.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm test
+
+  android:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install packages
+        run: npm install --no-audit --no-fund && npx cap telemetry off
+      - name: Copy libraries and model
+        run: ls node_modules/onnxruntime-web/dist && node scripts/vendor.mjs --strict
+      - name: Create Android project
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: npx cap add android && node scripts/patch-native.mjs android && npx cap sync android
+      - name: Build
+        working-directory: android
+        run: ./gradlew --no-daemon assembleRelease
+      - name: Sign
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          BT=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)
+          "$BT/zipalign" -p -f 4 android/app/build/outputs/apk/release/app-release-unsigned.apk aligned.apk
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > release.jks
+            PASS="$KEYSTORE_PASSWORD"
+          else
+            echo "::warning::ANDROID_KEYSTORE_B64 secret is not set. Signed with a one-off key: this APK can't update an earlier install."
+            PASS=oneoffkey
+            keytool -genkeypair -keystore release.jks -storepass "$PASS" -keypass "$PASS" -alias dashmate \
+              -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=DashMate"
+          fi
+          "$BT/apksigner" sign --ks release.jks --ks-pass "pass:$PASS" --ks-key-alias dashmate --out DashMate.apk aligned.apk
+          rm -f release.jks
+          "$BT/apksigner" verify DashMate.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: DashMate.apk
+
+  ios:
+    needs: test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Use the newest Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)"
+          xcodebuild -version
+      - name: Install packages
+        run: npm install --no-audit --no-fund && npx cap telemetry off
+      - name: Copy libraries and model
+        run: node scripts/vendor.mjs --strict
+      - name: Create iOS project
+        env:
+          BUILD_NUMBER: ${{ github.run_number }}
+        run: npx cap add ios && node scripts/patch-native.mjs ios && npx cap sync ios
+      - name: Build (unsigned, for sideloading)
+        run: |
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" build | tail -n 40
+          mkdir Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -qry DashMate.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios
+          path: DashMate.ipa
+
+  release:
+    needs: [android, ios]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          TAG="v$VERSION-build.${{ github.run_number }}"
+          gh release create "$TAG" DashMate.apk DashMate.ipa \
+            --title "DashMate $VERSION (build ${{ github.run_number }})" \
+            --notes-file docs/RELEASE_NOTES.md --target "${{ github.sha }}" --latest

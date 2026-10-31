@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { letterbox, toTensor, decode, nms, iou, lightColor, mainLight, countKinds, COCO, INPUT } from '../www/js/core/vision-math.js';
+import { letterbox, toTensor, decode, nms, iou, lightColor, mainLight, countKinds, summarize, labelOf, kindOf, COCO, INPUT } from '../www/js/core/vision-math.js';
 import { encodeDescription, decodeDescription, minifySdp } from '../www/js/core/pairing-code.js';
 
 test('vision: letterbox and tensor layout', () => {
@@ -34,7 +34,8 @@ test('vision: nms keeps the best of overlapping boxes per class', () => {
   const C = { x1: 1, y1: 1, x2: 11, y2: 11, score: 0.7, cls: 0 };
   assert.ok(iou(A, B) > 0.6);
   assert.deepEqual(nms([B, A, C]), [A, C]);
-  assert.deepEqual(countKinds([A, C, { cls: COCO.trafficLight }, { cls: COCO.truck }]), { car: 2, person: 1, light: 1 });
+  const c = countKinds([A, C, { cls: COCO.trafficLight }, { cls: COCO.truck }]);
+  assert.deepEqual([c.car, c.truck, c.person, c.light, c.bus], [1, 1, 1, 1, 0]);
 });
 
 function crop(color, lit = 40, total = 400) {
@@ -42,6 +43,26 @@ function crop(color, lit = 40, total = 400) {
   for (let i = 0; i < total; i++) px.set(i < lit ? color : [20, 20, 25], i * 4), (px[i * 4 + 3] = 255);
   return px;
 }
+
+test('vision: identifies each street object by type', () => {
+  const expect = { person: 'person', bicycle: 'bicycle', car: 'car', motorcycle: 'motorcycle', bus: 'bus', train: 'tram',
+    truck: 'truck', trafficLight: 'light', stopSign: 'stop', cat: 'animal', dog: 'animal', horse: 'animal' };
+  for (const [name, kind] of Object.entries(expect)) assert.equal(kindOf(COCO[name]), kind, name);
+  assert.equal(kindOf(50), null, 'broccoli is not a street object');
+  assert.equal(labelOf({ cls: COCO.dog }), 'Dog');
+  assert.equal(labelOf({ cls: COCO.trafficLight, color: 'red' }), 'Red light');
+  assert.equal(labelOf({ cls: COCO.trafficLight }), 'Traffic light');
+  assert.equal(labelOf({ cls: COCO.stopSign }), 'Stop sign');
+  assert.equal(labelOf({ cls: COCO.train }), 'Tram or train');
+  assert.equal(labelOf({ cls: COCO.truck }), 'Truck');
+});
+
+test('vision: chip summaries in a fixed order with plurals', () => {
+  const counts = countKinds([{ k: 'person' }, { k: 'car' }, { k: 'person' }, { k: 'bus' }, { k: 'bicycle' }, { k: 'stop' }, { k: 'person' }]);
+  assert.deepEqual(summarize(counts), ['1 car', '1 bus', '1 bike', '3 people', '1 stop sign']);
+  assert.deepEqual(summarize(countKinds([])), []);
+  assert.deepEqual(summarize({ bus: 2, light: 1 }), ['2 buses', '1 light']);
+});
 
 test('vision: traffic light colour', () => {
   assert.equal(lightColor(crop([255, 40, 30])), 'red');

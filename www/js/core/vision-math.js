@@ -1,9 +1,25 @@
 // Pure maths for on-device road reading with the YOLOX-Nano model (COCO classes).
 
 export const INPUT = 416;
-export const COCO = { person: 0, bicycle: 1, car: 2, motorcycle: 3, bus: 5, truck: 7, trafficLight: 9, stopSign: 11 };
-const WANTED = new Set(Object.values(COCO));
-const VEHICLES = new Set([COCO.car, COCO.motorcycle, COCO.bus, COCO.truck]);
+export const COCO = {
+  person: 0, bicycle: 1, car: 2, motorcycle: 3, bus: 5, train: 6, truck: 7,
+  trafficLight: 9, stopSign: 11, cat: 15, dog: 16, horse: 17,
+};
+// The street things DashMate identifies, from the model's 80 COCO classes.
+const CLASS_KIND = {
+  [COCO.person]: 'person', [COCO.bicycle]: 'bicycle', [COCO.car]: 'car', [COCO.motorcycle]: 'motorcycle',
+  [COCO.bus]: 'bus', [COCO.train]: 'tram', [COCO.truck]: 'truck', [COCO.trafficLight]: 'light',
+  [COCO.stopSign]: 'stop', [COCO.cat]: 'animal', [COCO.dog]: 'animal', [COCO.horse]: 'animal',
+};
+const WANTED = Object.keys(CLASS_KIND).map(Number);
+// Display order and words for each kind.
+export const KINDS = ['car', 'truck', 'bus', 'motorcycle', 'bicycle', 'tram', 'person', 'animal', 'light', 'stop'];
+const NAMES = {
+  car: ['car', 'cars'], truck: ['truck', 'trucks'], bus: ['bus', 'buses'], motorcycle: ['motorcycle', 'motorcycles'],
+  bicycle: ['bike', 'bikes'], tram: ['tram or train', 'trams or trains'], person: ['person', 'people'],
+  animal: ['animal', 'animals'], light: ['light', 'lights'], stop: ['stop sign', 'stop signs'],
+};
+const ANIMALS = { [COCO.cat]: 'Cat', [COCO.dog]: 'Dog', [COCO.horse]: 'Horse' };
 
 // YOLOX letterbox: scale to fit, top-left aligned, rest padded with grey 114.
 export function letterbox(srcW, srcH, size = INPUT) {
@@ -73,20 +89,33 @@ export function nms(boxes, thr = 0.45) {
 }
 
 export function kindOf(cls) {
-  if (VEHICLES.has(cls)) return 'car';
-  if (cls === COCO.person || cls === COCO.bicycle) return 'person';
-  if (cls === COCO.trafficLight) return 'light';
-  if (cls === COCO.stopSign) return 'stop';
-  return null;
+  return CLASS_KIND[cls] ?? null;
 }
 
+// How many of each kind. Boxes carry either a model class (cls) or a kind (k).
 export function countKinds(boxes) {
-  const c = { car: 0, person: 0, light: 0 };
+  const c = Object.fromEntries(KINDS.map((k) => [k, 0]));
   for (const b of boxes) {
-    const k = kindOf(b.cls);
+    const k = b.k ?? kindOf(b.cls);
     if (k in c) c[k]++;
   }
   return c;
+}
+
+// Short summaries for the chips, e.g. ["2 cars", "1 truck", "3 people"], in a fixed order.
+export function summarize(counts) {
+  return KINDS.filter((k) => counts?.[k] > 0).map((k) => `${counts[k]} ${NAMES[k][counts[k] === 1 ? 0 : 1]}`);
+}
+
+// Label drawn on the camera view for one detection.
+export function labelOf(box) {
+  const k = box.kind ?? kindOf(box.cls);
+  if (k === 'light') return box.color ? `${box.color[0].toUpperCase()}${box.color.slice(1)} light` : 'Traffic light';
+  if (k === 'animal') return ANIMALS[box.cls] ?? 'Animal';
+  if (k === 'tram') return 'Tram or train';
+  if (k === 'stop') return 'Stop sign';
+  if (k === 'bicycle') return 'Bicycle';
+  return k ? k[0].toUpperCase() + k.slice(1) : '';
 }
 
 // The light that most likely applies to us: biggest one in the middle/upper part of the frame.

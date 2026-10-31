@@ -39,7 +39,7 @@ test('scene: places detections by size and position', () => {
   const s = toScene([
     { k: 'person', b: [0.2, 0.4, 0.22, 0.6] },
     { k: 'light', b: [0.5, 0.1, 0.52, 0.16], c: 'green' },
-    { k: 'stop', b: [0.1, 0.1, 0.2, 0.2] },
+    { k: 'tree', b: [0.1, 0.1, 0.2, 0.2] },
     { k: 'car', b: [0.5, 0.5, 0.501, 0.502] },
   ]);
   assert.deepEqual(s.map((o) => o.kind), ['person', 'light']);
@@ -64,5 +64,16 @@ test('scene: boxFor is the inverse of toScene', () => {
     const [o] = toScene([boxFor(kind, x, z)]);
     assert.equal(o.kind, kind);
     assert.ok(Math.abs(o.x - x) < 1e-6 && Math.abs(o.z - z) < 1e-6, `${kind} ${o.x},${o.z}`);
+  }
+});
+
+test('scene: bigger vehicles are placed using their real height', () => {
+  // A bus and a car with the same box height: the bus (3.1 m tall) must be about twice as far.
+  const [car] = toScene([{ k: 'car', b: [0.45, 0.5, 0.55, 0.6] }]);
+  const [bus] = toScene([{ k: 'bus', b: [0.45, 0.5, 0.55, 0.6] }]);
+  assert.ok(Math.abs(bus.z / car.z - 3.1 / 1.5) < 1e-9);
+  for (const k of ['truck', 'tram', 'motorcycle', 'bicycle', 'animal', 'stop']) {
+    const [o] = toScene([boxFor(k, 2, 20)]);
+    assert.ok(o.kind === k && Math.abs(o.z - 20) < 1e-6, k);
   }
 });

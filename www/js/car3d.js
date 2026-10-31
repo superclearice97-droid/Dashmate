@@ -1,50 +1,50 @@
-// The 3D view of your car on the road (three.js). An original low-poly car; road
-// markings scroll with your real speed, and a car ahead appears when the camera sees one.
+// The 3D view of your car on the road (three.js), in the style of modern EV dashboards:
+// a multi-lane road that fades into the distance, lane lines that move with your real
+// speed, and the cars, people and traffic lights the camera sees, placed where they are.
+// All models are original low-poly shapes.
 import * as THREE from '../vendor/three/three.module.min.js';
 
 const PALETTE = {
-  light: { road: 0xd3d6dc, shoulder: 0xe6e8ec, line: 0xffffff, edge: 0xf7f7f9 },
-  dark: { road: 0x23262e, shoulder: 0x1a1c22, line: 0x8a8f9c, edge: 0x6b7080 },
+  light: { bg: 0xf4f5f7, road: 0xdcdee3, line: 0xffffff, edge: 0xffffff, other: 0xa9adb6, person: 0x9da2ab },
+  dark: { bg: 0x0e1014, road: 0x1f2228, line: 0x7c818c, edge: 0x9aa0ab, other: 0x5b606b, person: 0x6f7480 },
 };
+const LANE = 3.6;
+const LIGHT_COLORS = { red: 0xff3b30, yellow: 0xffc400, green: 0x2ee66b };
 
-function buildCar(color) {
+function buildCar(paint) {
   const car = new THREE.Group();
-  const paint = new THREE.MeshStandardMaterial({ color, roughness: 0.45, metalness: 0.15 });
-  const glass = new THREE.MeshStandardMaterial({ color: 0x2c3c56, roughness: 0.15, metalness: 0.5 });
+  const glass = new THREE.MeshStandardMaterial({ color: 0x24324a, roughness: 0.15, metalness: 0.5 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.8 });
   const red = new THREE.MeshStandardMaterial({ color: 0xff2a3a, emissive: 0xc0101e, emissiveIntensity: 0.9 });
 
-  const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 4.4), paint);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.55, 4.5), paint);
   body.position.y = 0.6;
   const hood = new THREE.Mesh(new THREE.BoxGeometry(1.86, 0.12, 1.3), paint);
-  hood.position.set(0, 0.93, -1.45);
+  hood.position.set(0, 0.93, -1.5);
   // Cabin narrows toward the roof so it reads as a car, not a box.
-  const cabinGeo = new THREE.BoxGeometry(1.62, 0.52, 2.1);
+  const cabinGeo = new THREE.BoxGeometry(1.62, 0.5, 2.3);
   const p = cabinGeo.attributes.position;
   for (let i = 0; i < p.count; i++) {
     if (p.getY(i) > 0) {
-      p.setX(i, p.getX(i) * 0.86);
-      p.setZ(i, p.getZ(i) * 0.72 + 0.1);
+      p.setX(i, p.getX(i) * 0.84);
+      p.setZ(i, p.getZ(i) * 0.68 + 0.12);
     }
   }
   cabinGeo.computeVertexNormals();
   const cabin = new THREE.Mesh(cabinGeo, glass);
-  cabin.position.set(0, 1.13, 0.15);
-  const roof = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 1.6), paint);
-  roof.position.set(0, 1.42, 0.25);
-  const bumper = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.22, 0.15), dark);
-  bumper.position.set(0, 0.42, 2.2);
-  car.add(body, hood, cabin, roof, bumper);
-  for (const x of [-0.62, 0.62]) {
-    const tail = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.13, 0.06), red);
-    tail.position.set(x, 0.74, 2.21);
-    car.add(tail);
-  }
+  cabin.position.set(0, 1.12, 0.15);
+  const bumper = new THREE.Mesh(new THREE.BoxGeometry(1.92, 0.2, 0.15), dark);
+  bumper.position.set(0, 0.42, 2.25);
+  car.add(body, hood, cabin, bumper);
+  // One light bar across the back.
+  const tail = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.07, 0.05), red);
+  tail.position.set(0, 0.8, 2.26);
+  car.add(tail);
   car.userData.wheels = [];
   const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.28, 18);
   wheelGeo.rotateZ(Math.PI / 2);
   for (const x of [-0.92, 0.92]) {
-    for (const z of [-1.4, 1.4]) {
+    for (const z of [-1.45, 1.45]) {
       const w = new THREE.Mesh(wheelGeo, dark);
       w.position.set(x, 0.36, z);
       car.add(w);
@@ -53,14 +53,50 @@ function buildCar(color) {
   }
   const shadow = new THREE.Mesh(
     new THREE.CircleGeometry(1, 32),
-    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.22, depthWrite: false }),
+    new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.2, depthWrite: false }),
   );
   shadow.rotation.x = -Math.PI / 2;
-  shadow.scale.set(1.25, 2.6, 1);
+  shadow.scale.set(1.3, 2.7, 1);
   shadow.position.y = 0.01;
   car.add(shadow);
-  car.userData.paint = paint;
   return car;
+}
+
+// A simple, featureless car shape for traffic around you.
+function buildOther(mat) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.85, 0.6, 4.4), mat);
+  body.position.y = 0.62;
+  const top = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.5, 2.2), mat);
+  top.position.set(0, 1.15, 0.2);
+  g.add(body, top);
+  return g;
+}
+
+function buildPerson(mat) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.22, 0.85, 4, 10), mat);
+  body.position.y = 0.75;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 10), mat);
+  head.position.y = 1.55;
+  g.add(body, head);
+  return g;
+}
+
+function buildLight() {
+  const g = new THREE.Group();
+  const housing = new THREE.Mesh(new THREE.BoxGeometry(0.42, 1.15, 0.3), new THREE.MeshStandardMaterial({ color: 0x23252b, roughness: 0.6 }));
+  g.add(housing);
+  g.userData.lamps = ['red', 'yellow', 'green'].map((name, i) => {
+    const m = new THREE.MeshStandardMaterial({ color: 0x3a3d44, emissive: 0x000000 });
+    const lamp = new THREE.Mesh(new THREE.SphereGeometry(0.12, 14, 10), m);
+    lamp.position.set(0, 0.34 - i * 0.34, 0.16);
+    lamp.userData.name = name;
+    g.add(lamp);
+    return lamp;
+  });
+  g.position.y = 5.2;
+  return g;
 }
 
 export function createCar3d(canvas, { theme = 'light', color = '#eef0f3' } = {}) {
@@ -72,69 +108,104 @@ export function createCar3d(canvas, { theme = 'light', color = '#eef0f3' } = {})
   }
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(38, 1, 0.1, 400);
-  camera.position.set(0, 4.8, 10.5);
-  camera.lookAt(0, 0.4, -8);
+  scene.fog = new THREE.Fog(0xffffff, 12, 78);
+  const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 400);
+  camera.position.set(0, 5.4, 16);
+  camera.lookAt(0, 2.2, -14);
 
-  scene.add(new THREE.HemisphereLight(0xffffff, 0x8890a0, 1.4));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.6);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x8890a0, 1.5));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.5);
   sun.position.set(4, 10, 6);
   scene.add(sun);
 
   const mats = {
     road: new THREE.MeshStandardMaterial({ roughness: 1 }),
-    shoulder: new THREE.MeshStandardMaterial({ roughness: 1 }),
     line: new THREE.MeshBasicMaterial(),
     edge: new THREE.MeshBasicMaterial(),
+    paint: new THREE.MeshStandardMaterial({ color, roughness: 0.4, metalness: 0.2 }),
+    other: new THREE.MeshStandardMaterial({ roughness: 0.7 }),
+    person: new THREE.MeshStandardMaterial({ roughness: 0.8 }),
   };
-  const road = new THREE.Mesh(new THREE.PlaneGeometry(11, 400), mats.road);
+  const road = new THREE.Mesh(new THREE.PlaneGeometry(LANE * 5, 400), mats.road);
   road.rotation.x = -Math.PI / 2;
   road.position.z = -180;
-  const shoulder = new THREE.Mesh(new THREE.PlaneGeometry(80, 400), mats.shoulder);
-  shoulder.rotation.x = -Math.PI / 2;
-  shoulder.position.set(0, -0.02, -180);
-  scene.add(shoulder, road);
-  for (const x of [-5.3, 5.3]) {
+  scene.add(road);
+  for (const x of [-2.5 * LANE, 2.5 * LANE]) {
     const edge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.01, 400), mats.edge);
     edge.position.set(x, 0.01, -180);
     scene.add(edge);
   }
 
-  const DASH = 6;
-  const dashCount = 2 * 40;
-  const dashes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.14, 0.01, 2.6), mats.line, dashCount);
+  const DASH = 8;
+  const dashX = [-1.5 * LANE, -0.5 * LANE, 0.5 * LANE, 1.5 * LANE];
+  const perLine = 30;
+  const dashes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.14, 0.01, 3), mats.line, dashX.length * perLine);
   scene.add(dashes);
   const m4 = new THREE.Matrix4();
   let offset = 0;
   const placeDashes = () => {
     let i = 0;
-    for (const x of [-1.8, 1.8]) {
-      for (let k = 0; k < dashCount / 2; k++) {
-        m4.makeTranslation(x, 0.012, 12 - k * DASH + offset);
+    for (const x of dashX) {
+      for (let k = 0; k < perLine; k++) {
+        m4.makeTranslation(x, 0.012, 14 - k * DASH + offset);
         dashes.setMatrixAt(i++, m4);
       }
     }
     dashes.instanceMatrix.needsUpdate = true;
   };
 
-  const car = buildCar(color);
+  const car = buildCar(mats.paint);
   scene.add(car);
-  const lead = buildCar('#3b6ff5');
-  lead.position.z = -16;
-  lead.visible = false;
-  scene.add(lead);
+
+  // Pools of things around you, reused frame to frame.
+  const pools = {
+    car: Array.from({ length: 8 }, () => buildOther(mats.other)),
+    person: Array.from({ length: 6 }, () => buildPerson(mats.person)),
+    light: Array.from({ length: 3 }, buildLight),
+  };
+  for (const list of Object.values(pools)) {
+    for (const o of list) {
+      o.visible = false;
+      o.userData.target = null;
+      scene.add(o);
+    }
+  }
 
   const applyTheme = (t) => {
     const p = PALETTE[t] || PALETTE.light;
+    scene.fog.color.setHex(p.bg);
     mats.road.color.setHex(p.road);
-    mats.shoulder.color.setHex(p.shoulder);
     mats.line.color.setHex(p.line);
     mats.edge.color.setHex(p.edge);
+    mats.other.color.setHex(p.other);
+    mats.person.color.setHex(p.person);
   };
   applyTheme(theme);
 
+  // objects: [{kind, x, z, color}] from core/scene.js (z = metres ahead).
+  const setObjects = (objects) => {
+    for (const [kind, list] of Object.entries(pools)) {
+      const mine = (objects || []).filter((o) => o.kind === kind);
+      list.forEach((o, i) => {
+        const t = mine[i];
+        o.userData.target = t ? { x: t.x, z: -t.z, color: t.color } : null;
+        if (t && !o.visible) {
+          o.position.x = t.x;
+          o.position.z = -t.z;
+          o.visible = true;
+        }
+        if (kind === 'light' && t) {
+          for (const lamp of o.userData.lamps) {
+            const on = lamp.userData.name === t.color;
+            lamp.material.emissive.setHex(on ? LIGHT_COLORS[t.color] : 0x000000);
+            lamp.material.color.setHex(on ? LIGHT_COLORS[t.color] : 0x3a3d44);
+          }
+        }
+      });
+    }
+  };
+
   let speed = 0;
-  let leadTarget = false;
   let running = false;
   let last = 0;
   const resize = () => {
@@ -143,7 +214,7 @@ export function createCar3d(canvas, { theme = 'light', color = '#eef0f3' } = {})
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    camera.fov = w / h < 0.9 ? 50 : 38;
+    camera.fov = w / h < 0.9 ? 52 : 40;
     camera.updateProjectionMatrix();
   };
   const frame = (now) => {
@@ -155,10 +226,18 @@ export function createCar3d(canvas, { theme = 'light', color = '#eef0f3' } = {})
     offset = (offset + speed * dt) % DASH;
     placeDashes();
     for (const w of car.userData.wheels) w.rotation.x -= (speed * dt) / 0.36;
-    // The car ahead eases in and out instead of popping.
-    const targetZ = leadTarget ? -16 : -60;
-    lead.position.z += (targetZ - lead.position.z) * Math.min(1, dt * 2);
-    lead.visible = lead.position.z > -55;
+    const ease = Math.min(1, dt * 4);
+    for (const list of Object.values(pools)) {
+      for (const o of list) {
+        const t = o.userData.target;
+        if (!t) {
+          o.visible = false;
+          continue;
+        }
+        o.position.x += (t.x - o.position.x) * ease;
+        o.position.z += (t.z - o.position.z) * ease;
+      }
+    }
     renderer.render(scene, camera);
   };
 
@@ -168,9 +247,9 @@ export function createCar3d(canvas, { theme = 'light', color = '#eef0f3' } = {})
 
   return {
     setSpeed: (mps) => { speed = mps || 0; },
-    setLead: (v) => { leadTarget = !!v; },
+    setObjects,
     setTheme: applyTheme,
-    setColor: (hex) => car.userData.paint.color.set(hex),
+    setColor: (hex) => mats.paint.color.set(hex),
     start() {
       if (running) return;
       running = true;

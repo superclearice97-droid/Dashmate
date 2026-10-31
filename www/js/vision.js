@@ -106,10 +106,13 @@ async function detectOnce() {
     if (w > 2 && h > 2) b.color = lightColor(frCtx.getImageData(x, y, w, h).data);
   }
   const main = mainLight(lights, vw, vh);
-  const lead = boxes.some((b) => b.kind === 'car' && (b.x1 + b.x2) / 2 > vw * 0.35 && (b.x1 + b.x2) / 2 < vw * 0.65 && b.y2 > vh * 0.55 && b.x2 - b.x1 > vw * 0.12);
+  // Positions for the 3D view, as fractions of the frame.
+  const r3 = (v) => Math.round(v * 1000) / 1000;
+  const scene = boxes.filter((b) => ['car', 'person', 'light'].includes(b.kind)).slice(0, 20)
+    .map((b) => ({ k: b.kind, b: [r3(b.x1 / vw), r3(b.y1 / vh), r3(b.x2 / vw), r3(b.y2 / vh)], c: b.color ?? null }));
 
   draw(overlay, video, boxes);
-  emit('vision', { counts: countKinds(boxes), light: main?.color ?? null, lead });
+  emit('vision', { counts: countKinds(boxes), light: main?.color ?? null, boxes: scene, aspect: vw / vh });
 }
 
 function draw(canvas, video, boxes) {

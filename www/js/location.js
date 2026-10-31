@@ -4,6 +4,7 @@
 //   demo   - a simulated drive, for trying the app at home
 import { emit, on } from './bus.js';
 import { cumulative, pointAt, distance } from './core/geo.js';
+import { boxFor } from './core/scene.js';
 
 const REMOTE_FRESH_MS = 5000;
 let watchId = null;
@@ -100,9 +101,27 @@ export function startDemo() {
     const pos = pointAt(DEMO_LINE, cum, along);
     const ahead = pointAt(DEMO_LINE, cum, along + 5);
     emit('fix', { lon: pos[0], lat: pos[1], accuracy: 5, speed, heading: headingOf(pos, ahead), t: Date.now(), source: 'demo' });
-    emit('demo-vision', { light, counts: { car: light ? 2 : 1, person: light ? 3 : 0, light: light ? 1 : 0 } });
+    emit('demo-vision', demoView(along, stopAt, speed, light, now / 1000));
     if (along >= total) stopDemo();
   }, 250);
+}
+
+// What the camera "sees" on the demo drive: a car ahead, traffic in the next lanes,
+// and at the red light a stopped queue, a crossing pedestrian and the light itself.
+function demoView(along, stopAt, speed, light, t) {
+  const boxes = [];
+  const gap = light ? Math.max(7, stopAt - along + 7) : 18 + speed * 1.2 + 4 * Math.sin(t / 5);
+  boxes.push(boxFor('car', 0, gap));
+  boxes.push(boxFor('car', 3.6, 28 + 8 * Math.sin(t / 7)));
+  boxes.push(boxFor('car', -3.6, 45 + 10 * Math.cos(t / 9)));
+  if (light) {
+    boxes.push(boxFor('light', 0.8, gap + 9, light));
+    boxes.push(boxFor('person', -7 + ((t * 1.3) % 14), gap + 3));
+    boxes.push(boxFor('person', 6.5, gap + 5));
+  }
+  const counts = { car: 0, person: 0, light: 0 };
+  for (const b of boxes) counts[b.k]++;
+  return { light, counts, boxes, aspect: 16 / 9 };
 }
 
 function headingOf(a, b) {

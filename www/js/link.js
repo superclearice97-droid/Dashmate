@@ -43,7 +43,7 @@ function wire(dc) {
 const num = (v, lo, hi) => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi;
 
 function receive(text) {
-  if (role !== 'screen' || typeof text !== 'string' || text.length > 2000) return;
+  if (role !== 'screen' || typeof text !== 'string' || text.length > 4000) return;
   let m;
   try { m = JSON.parse(text); } catch { return; }
   if (m.t === 'fix' && num(m.lat, -90, 90) && num(m.lon, -180, 180)) {
@@ -58,7 +58,10 @@ function receive(text) {
     emit('remote-vision', {
       counts: { car: num(c.car, 0, 99) ? c.car : 0, person: num(c.person, 0, 99) ? c.person : 0, light: num(c.light, 0, 99) ? c.light : 0 },
       light: ['red', 'yellow', 'green'].includes(m.light) ? m.light : null,
-      lead: m.lead === true,
+      boxes: (Array.isArray(m.boxes) ? m.boxes.slice(0, 20) : [])
+        .filter((x) => ['car', 'person', 'light'].includes(x?.k) && Array.isArray(x.b) && x.b.length === 4 && x.b.every((v) => num(v, 0, 1)))
+        .map((x) => ({ k: x.k, b: x.b, c: ['red', 'yellow', 'green'].includes(x.c) ? x.c : null })),
+      aspect: num(m.aspect, 0.2, 5) ? m.aspect : 16 / 9,
     });
   }
 }
@@ -114,5 +117,5 @@ on('fix', (f) => {
   send({ t: 'fix', lat: f.lat, lon: f.lon, acc: f.accuracy, spd: f.speed, hdg: f.heading });
 });
 on('vision', (v) => {
-  if (role === 'phone' && v) send({ t: 'vision', counts: v.counts, light: v.light, lead: v.lead });
+  if (role === 'phone' && v) send({ t: 'vision', counts: v.counts, light: v.light, boxes: v.boxes, aspect: v.aspect });
 });

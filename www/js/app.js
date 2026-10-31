@@ -6,6 +6,8 @@ import { distance } from './core/geo.js';
 import { TripTracker } from './core/trip.js';
 import { NavRoute } from './core/route.js';
 import { SpeedWatcher, GreenLightWatcher } from './core/alerts.js';
+import { isDaytime } from './core/sun.js';
+import { toScene, guessGear } from './core/scene.js';
 import { startDeviceGps, startDemo, stopDemo, demoRunning, demoRoute, DEMO_LINE } from './location.js';
 import * as mapView from './map.js';
 import { searchPlaces, fetchRoute, fetchRoad, fetchTemperature } from './services.js';
@@ -37,6 +39,7 @@ let road = { name: '', maxspeed: null };
 let roadQuery = { pos: null, t: 0, busy: false };
 let slowActive = false;
 let goTimer = null;
+let lastMovingAt = 0;
 
 // ---------------------------------------------------------------- layout & theme
 function layout() {
@@ -53,11 +56,14 @@ function layout() {
 
 function currentTheme() {
   if (settings.theme !== 'auto') return settings.theme;
+  // Auto: day look from sunrise to sunset where you are; system setting until GPS is known.
+  if (snap.pos) return isDaytime(new Date(), snap.pos[1], snap.pos[0]) ? 'light' : 'dark';
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
 function applyTheme() {
   const t = currentTheme();
+  if (document.documentElement.dataset.theme === t && car3d) return;
   document.documentElement.dataset.theme = t;
   mapView.setMapTheme(t);
   car3d?.setTheme(t);
@@ -109,22 +115,27 @@ const clockText = (d = new Date()) => d.toLocaleTimeString([], { hour: 'numeric'
 function tickClock() {
   $('#clock').textContent = clockText();
   $('#dock-clock').textContent = clockText().replace(/\s?[AP]M$/i, '');
+  renderGear();
+  applyTheme(); // sunrise / sunset
+}
+
+function renderGear() {
+  const g = snap.pos ? guessGear(snap.speed, Date.now() - lastMovingAt) : 'P';
+  $$('#gear span').forEach((el) => el.classList.toggle('on', el.textContent === g));
 }
 
 // ---------------------------------------------------------------- position updates
 on('fix', (fix) => {
   snap = trip.update(fix);
-  lastFix = fix;
   const pos = snap.pos;
   const units = settings.units;
 
+  const firstFix = !lastFix;
+  lastFix = fix;
+  if (snap.speed > 0.5) lastMovingAt = Date.now();
   $('#speed').textContent = speedValue(snap.speed, units);
-  const unitShort = units === 'imperial' ? 'mph' : 'km/h';
-  $('#st-trip').textContent = (snap.distance / (units === 'imperial' ? 1609.344 : 1000)).toFixed(1);
-  $('#st-trip-u').textContent = units === 'imperial' ? 'mi' : 'km';
-  $('#st-avg').textContent = speedValue(snap.avgSpeed, units);
-  $('#st-max').textContent = speedValue(snap.maxSpeed, units);
-  $$('.stats .su').forEach((el) => { el.textContent = unitShort; });
+  renderGear();
+  if (firstFix) applyTheme();
 
   const label = { device: 'GPS · This device', phone: 'GPS · Phone', demo: 'Demo drive' }[fix.source] || 'GPS';
   $('#gps-chip').innerHTML = `<i class="dot" style="background:${fix.accuracy > 50 ? '#f59e0b' : '#22c55e'}"></i>${label}`;
@@ -211,7 +222,7 @@ function handleVision(v) {
   if (!v) {
     chips.innerHTML = '';
     camChips.innerHTML = '';
-    car3d?.setLead(false);
+    car3d?.setObjects([]);
     return;
   }
   const c = v.counts;
@@ -220,7 +231,7 @@ function handleVision(v) {
     + `<span class="chip"><i class="dot" style="background:#22c55e"></i>${c.light} light${c.light === 1 ? '' : 's'}</span>`;
   chips.innerHTML = html;
   camChips.innerHTML = html;
-  car3d?.setLead(v.lead);
+  car3d?.setObjects(toScene(v.boxes, v.aspect));
   if (greenWatch.update(v.light, snap.speed, Date.now()) === 'go') {
     goActive = true;
     chime('go');
@@ -286,20 +297,16 @@ function renderNav(p) {
   const icon = $('#nav-icon');
   icon.innerHTML = `<use href="${iconHref(p.step.icon)}"/>`;
   icon.style.transform = `rotate(${p.step.icon.angle}deg)`;
-  const then = $('#nav-then');
-  then.hidden = !p.then;
-  if (p.then) {
-    $('#then-text').textContent = p.then.text;
-    const ti = $('#then-icon');
-    ti.innerHTML = `<use href="${iconHref(p.then.icon)}"/>`;
-    ti.style.transform = `rotate(${p.then.icon.angle}deg)`;
+  const list = $('#turn-list');
+  if (!list.hidden) {
+    list.innerHTML = nav.steps.slice(p.next + 1).map((st) => `<li><svg style="transform:rotate(${st.icon.angle}deg)"><use href="${iconHref(st.icon)}"/></svg>`
+      + `<span>${esc(st.text)}</span><b>${esc(distanceText(st.along - p.along, units))}</b></li>`).join('');
   }
   const arrive = new Date(Date.now() + p.remainingTime * 1000);
   $('#eta-time').textContent = clockText(arrive).replace(/\s?[AP]M$/i, '');
   $('#eta-left').textContent = formatDuration(p.remainingTime);
   $('#eta-dist').textContent = distanceText(p.remaining, units);
   $('#nav-card').hidden = false;
-  $('#eta-card').hidden = false;
   $('#where-to').hidden = true;
 }
 
@@ -343,7 +350,7 @@ function endNavigation() {
   navDest = null;
   mapView.showRoute(null);
   $('#nav-card').hidden = true;
-  $('#eta-card').hidden = true;
+  $('#turn-list').hidden = true;
   $('#where-to').hidden = false;
   if (demoRunning()) stopDemo();
 }
@@ -582,7 +589,7 @@ function bindFields(card) {
     const b = e.target.closest('[data-seg] button');
     if (!b) return;
     const name = b.closest('[data-seg]').dataset.seg;
-    const v = name === 'overBy' ? Number(b.dataset.v) : b.dataset.v;
+    const v = name === 'overBy' || name === 'volume' ? Number(b.dataset.v) : b.dataset.v;
     $$('button', b.parentElement).forEach((x) => x.classList.toggle('on', x === b));
     saveSettings({ [name]: v });
   });
@@ -596,13 +603,25 @@ function bindFields(card) {
 }
 
 function openSettings() {
-  openSheet(`${head('Settings')}
+  const u = settings.units;
+  const per = u === 'imperial' ? 1609.344 : 1000;
+  openSheet(`${head('Controls')}
+    <h3>Trip</h3>
+    <div class="trip-row">
+      <div><b>${(snap.distance / per).toFixed(1)}</b><small>${u === 'imperial' ? 'mi' : 'km'}</small><span>Distance</span></div>
+      <div><b>${speedValue(snap.avgSpeed, u)}</b><small>${speedUnit(u).toLowerCase()}</small><span>Average</span></div>
+      <div><b>${speedValue(snap.maxSpeed, u)}</b><small>${speedUnit(u).toLowerCase()}</small><span>Top speed</span></div>
+    </div>
+    <div class="row-btns"><button class="btn" data-reset-trip>Reset trip</button></div>
+    <h3>Display</h3>
     <div class="field"><span>Units</span>${seg('units', settings.units, [['imperial', 'mph'], ['metric', 'km/h']])}</div>
-    <div class="field"><span>Look</span>${seg('theme', settings.theme, [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']])}</div>
+    <div class="field"><span>Look<small>Auto switches to dark at sunset where you are</small></span>${seg('theme', settings.theme, [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']])}</div>
     <div class="field"><span>Car color</span><span class="swatches">${COLORS.map((c) => `<button data-color="${c}" style="background:${c}" class="${c === settings.carColor ? 'on' : ''}" aria-label="Car color ${c}"></button>`).join('')}</span></div>
     <div class="field"><span>Spoken directions</span>${sw('voice', settings.voice)}</div>
     <div class="field"><span>Alert sounds</span>${sw('chimes', settings.chimes)}</div>
     <div class="field"><span>“Slow down” when over by<small>Compared with the speed limit from OpenStreetMap</small></span>${seg('overBy', settings.overBy, [[0, '0'], [5, '5'], [10, '10']])}</div>
+    <h3>Sound</h3>
+    <div class="field"><span>Volume<small>Music and spoken directions in DashMate</small></span>${seg('volume', settings.volume, [[0.3, 'Low'], [0.6, 'Medium'], [1, 'High']])}</div>
     <h3>Online features</h3>${onlineFields()}
     <h3>Music</h3>
     <div class="field"><span>Remember my songs<small>Kept only on this device</small></span>${sw('rememberMusic', settings.rememberMusic)}</div>
@@ -611,13 +630,18 @@ function openSettings() {
     <div class="row-btns"><button class="btn" data-demo>${demoRunning() ? 'Stop demo drive' : 'Start demo drive'}</button></div>
     <h3>About</h3>
     <div class="row-btns"><button class="btn" data-legal="privacy">Privacy</button><button class="btn" data-legal="terms">Terms &amp; safety</button><button class="btn" data-legal="licenses">Licenses</button></div>
-    <p class="muted small">DashMate 0.1.0 · free and open source (MIT)</p>`, (card) => {
+    <p class="muted small">DashMate 0.2.0 · free and open source (MIT)</p>`, (card) => {
     bindFields(card);
     card.addEventListener('click', async (e) => {
       const c = e.target.closest('[data-color]');
       if (c) {
         saveSettings({ carColor: c.dataset.color });
         $$('[data-color]', card).forEach((x) => x.classList.toggle('on', x === c));
+      }
+      if (e.target.closest('[data-reset-trip]')) {
+        trip.reset();
+        openSettings();
+        return;
       }
       if (e.target.closest('[data-forget]')) {
         await music.forgetAllMusic();
@@ -647,6 +671,7 @@ onSettings((s) => {
   lastSettings = JSON.stringify(s);
   applyTheme();
   car3d?.setColor(s.carColor);
+  music.setVolume(s.volume);
   $('#speed-unit').textContent = speedUnit(s.units);
   $('#mute-icon').innerHTML = `<use href="${s.voice || s.chimes ? '#i-volume' : '#i-mute'}"/>`;
   renderRoad();
@@ -699,6 +724,18 @@ document.addEventListener('click', (e) => {
     case 'pair': return openPair();
     case 'apps': return openApps();
     case 'close-tab': return setTab('dash');
+    case 'turns': {
+      const list = $('#turn-list');
+      list.hidden = !list.hidden;
+      if (nav?.lastProgress) renderNav(nav.lastProgress);
+      return;
+    }
+    case 'vol-up':
+    case 'vol-down': {
+      const v = Math.round(Math.min(1, Math.max(0, settings.volume + (act === 'vol-up' ? 0.1 : -0.1))) * 10) / 10;
+      saveSettings({ volume: v });
+      return toast(`Volume ${Math.round(v * 100)}%`, 1200);
+    }
     case 'end': return endNavigation();
     case 'recenter': return mapView.recenter();
     case 'pitch': return mapView.toggle3d();
@@ -757,7 +794,7 @@ function onboarding(done) {
     });
   });
   const step2 = () => openSheet(`<h2>Online features</h2>
-    <p>These use free OpenStreetMap services over the internet. Each one only sends what's listed. You can change this any time in Settings.</p>
+    <p>These use free OpenStreetMap services over the internet. Each one only sends what's listed. You can change this any time under the car button › Controls.</p>
     ${onlineFields()}
     <p class="muted small">Your speed, trips, music and camera images never leave your device.</p>
     <div class="row-btns"><button class="btn primary block" data-start>Start driving</button></div>`, (card) => {
@@ -777,8 +814,7 @@ async function boot() {
   window.addEventListener('resize', layout);
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', applyTheme);
   $('#speed-unit').textContent = speedUnit(settings.units);
-  $$('.stats .su').forEach((el) => { el.textContent = settings.units === 'imperial' ? 'mph' : 'km/h'; });
-  $('#st-trip-u').textContent = settings.units === 'imperial' ? 'mi' : 'km';
+  music.setVolume(settings.volume);
   tickClock();
   setInterval(tickClock, 10000);
   // The 3D view needs WebGL; load it separately so the rest works without it.

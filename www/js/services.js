@@ -1,5 +1,5 @@
 // Every request DashMate makes to the internet lives in this file, and each one
-// is gated by its own switch in Settings › Online features.
+// is gated by its own switch in Controls › Online features.
 import { settings } from './settings.js';
 import { osrmUrl } from './core/route.js';
 import { overpassQuery, OVERPASS_URL, pickWay } from './core/speedlimit.js';
@@ -17,7 +17,7 @@ async function getJson(url, init = {}, ms = 10000) {
 }
 
 function need(flag, label) {
-  if (!settings.online[flag]) throw new Error(`${label} is turned off in Settings`);
+  if (!settings.online[flag]) throw new Error(`${label} is turned off in Controls`);
 }
 
 // Place search (Photon by komoot, OpenStreetMap data). Sent: the search text and,

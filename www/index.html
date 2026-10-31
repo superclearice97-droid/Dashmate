@@ -34,31 +34,29 @@
       <symbol id="i-grid" viewBox="0 0 24 24"><path d="M4 4h4v4H4V4Zm6 0h4v4h-4V4Zm6 0h4v4h-4V4ZM4 10h4v4H4v-4Zm6 0h4v4h-4v-4Zm6 0h4v4h-4v-4ZM4 16h4v4H4v-4Zm6 0h4v4h-4v-4Zm6 0h4v4h-4v-4Z"/></symbol>
       <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M12 3 5 10.5h5V21h4V10.5h5L12 3Z"/></symbol>
       <symbol id="i-flag" viewBox="0 0 24 24"><path d="M5 3h2v18H5V3Zm3 1h11l-2.5 4L19 12H8V4Z"/></symbol>
+      <symbol id="i-chev-l" viewBox="0 0 24 24"><path d="m15.4 5.4-1.4-1.4-8 8 8 8 1.4-1.4L8.8 12z"/></symbol>
+      <symbol id="i-chev-r" viewBox="0 0 24 24"><path d="m8.6 5.4 1.4-1.4 8 8-8 8-1.4-1.4 6.6-6.6z"/></symbol>
       <symbol id="i-round" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 7 7h-2.5A4.5 4.5 0 1 1 12 7.5V5Zm0-3v8l4-4-4-4Z"/></symbol>
     </defs>
   </svg>
 
   <div id="app" data-layout="tablet" data-tab="dash">
-    <!-- Dashboard: speed, your car in 3D, trip, music -->
-    <section id="dash" class="panel" aria-label="Dashboard">
+    <!-- Car panel: gear, speed, speed limit, your car and what's around it -->
+    <section id="dash" class="panel" aria-label="Car">
       <div class="dash-top">
+        <div id="gear" class="gear" aria-label="Gear (estimated from movement)"><span>P</span><span>R</span><span>N</span><span>D</span></div>
         <span id="gps-chip" class="chip">No GPS yet</span>
-        <span id="vision-chips" class="chips"></span>
       </div>
       <div class="speed-row">
         <div class="speed"><span id="speed">0</span><small id="speed-unit">MPH</small></div>
         <div id="limit" class="limit" hidden></div>
       </div>
       <div id="car-wrap">
-        <canvas id="car3d" aria-label="Your car on the road"></canvas>
+        <canvas id="car3d" aria-label="Your car and the traffic around it"></canvas>
+        <div id="vision-chips" class="chips vision-chips"></div>
       </div>
       <div id="street" class="street"></div>
-      <div class="stats">
-        <div><span class="lbl">Trip</span><b id="st-trip">0.0</b><small id="st-trip-u">mi</small></div>
-        <div><span class="lbl">Average</span><b id="st-avg">0</b><small class="su">mph</small></div>
-        <div><span class="lbl">Top</span><b id="st-max">0</b><small class="su">mph</small></div>
-      </div>
-      <div class="music-mini" data-music-mini>
+      <div class="music-mini only-phone" data-music-mini>
         <div class="art"><svg><use href="#i-music"/></svg></div>
         <div class="meta"><b data-m-title>No music yet</b><span data-m-artist>Tap ♪ to add songs</span></div>
         <div class="ctrls">
@@ -110,40 +108,52 @@
     <!-- Map and navigation -->
     <main id="map-area" aria-label="Map">
       <div id="map"></div>
-      <div id="map-off" class="map-off" hidden><p>The map is off.<br><small>Turn it on in Settings › Online features.</small></p></div>
+      <div id="map-off" class="map-off" hidden><p>The map is off.<br><small>Turn it on in Controls › Online features.</small></p></div>
+      <button id="where-to" class="where-to" data-act="search"><svg><use href="#i-search"/></svg>Navigate</button>
       <div id="nav-card" class="nav-card" hidden>
-        <div class="nav-main">
+        <button class="nav-main" data-act="turns" aria-label="Show all turns">
           <svg id="nav-icon" class="nav-icon"><use href="#i-arrow"/></svg>
-          <div><div class="nav-dist" id="nav-dist"></div><div class="nav-text" id="nav-text"></div></div>
+          <span><span class="nav-dist" id="nav-dist"></span><span class="nav-text" id="nav-text"></span></span>
+        </button>
+        <ol id="turn-list" class="turn-list" hidden></ol>
+        <div class="nav-foot">
+          <span><b id="eta-time"></b> <small>arrival</small></span>
+          <span><b id="eta-left"></b></span>
+          <span><b id="eta-dist"></b></span>
+          <button class="icon end" data-act="end" aria-label="End navigation"><svg><use href="#i-close"/></svg></button>
         </div>
-        <div class="nav-then" id="nav-then" hidden>Then <svg id="then-icon"><use href="#i-arrow"/></svg> <span id="then-text"></span></div>
       </div>
       <div id="alert" class="alert" hidden></div>
       <div class="top-right">
         <span id="demo-badge" class="tag demo" hidden>DEMO</span>
-        <span id="clock" class="chip"></span>
+        <span id="clock" class="status"></span>
+        <span id="temp" class="status"></span>
       </div>
       <div class="map-tools">
-        <button class="icon" data-act="mute" aria-label="Voice and alert sounds"><svg id="mute-icon"><use href="#i-volume"/></svg></button>
         <button class="icon" data-act="pitch" aria-label="3D or flat map"><svg><use href="#i-cube"/></svg></button>
         <button class="icon" data-act="recenter" id="recenter" aria-label="Follow my car"><svg><use href="#i-locate"/></svg></button>
+        <button class="icon" data-act="mute" aria-label="Voice and alert sounds"><svg id="mute-icon"><use href="#i-volume"/></svg></button>
         <button class="icon" data-act="zoom-in" aria-label="Zoom in"><svg><use href="#i-plus"/></svg></button>
         <button class="icon" data-act="zoom-out" aria-label="Zoom out"><svg><use href="#i-minus"/></svg></button>
       </div>
-      <div id="eta-card" class="eta-card" hidden>
-        <div><b id="eta-time"></b><small>arrival</small></div>
-        <div><b id="eta-left" class="green"></b><small id="eta-dist"></small></div>
-        <button class="btn danger" data-act="end">End</button>
+      <!-- Media card, sitting on the map above the bottom bar -->
+      <div class="media-card only-tablet" data-music-mini>
+        <div class="art"><svg><use href="#i-music"/></svg></div>
+        <div class="meta"><b data-m-title>No music yet</b><span data-m-artist>Tap ♪ to add songs</span></div>
+        <div class="ctrls">
+          <button class="icon" data-act="prev" aria-label="Previous"><svg><use href="#i-prev"/></svg></button>
+          <button class="icon" data-act="play" aria-label="Play or pause"><svg data-m-icon><use href="#i-play"/></svg></button>
+          <button class="icon" data-act="next" aria-label="Next"><svg><use href="#i-next"/></svg></button>
+        </div>
+        <div class="bar"><i data-m-bar></i></div>
       </div>
-      <button id="where-to" class="where-to" data-act="search"><svg><use href="#i-search"/></svg>Where to?</button>
     </main>
 
-    <!-- Dock (tablet: bottom bar; phone: side or bottom tabs) -->
+    <!-- Bottom bar (tablet) / side or bottom tabs (phone) -->
     <nav id="dock" aria-label="Main">
       <div class="dock-left">
         <span id="dock-clock" class="only-phone dock-clock"></span>
-        <button class="icon plain only-tablet" data-act="settings" aria-label="Car and settings"><svg><use href="#i-car"/></svg></button>
-        <span id="temp" class="temp only-tablet"></span>
+        <button class="icon plain only-tablet car-btn" data-act="settings" aria-label="Controls"><svg><use href="#i-car"/></svg></button>
       </div>
       <div class="dock-apps">
         <button class="tab only-phone" data-tab="map" aria-label="Map"><svg><use href="#i-map"/></svg></button>
@@ -155,7 +165,12 @@
         <button class="tab app a-purple only-tablet" data-act="apps" aria-label="Other apps"><svg><use href="#i-grid"/></svg></button>
       </div>
       <div class="dock-right">
-        <button class="tab" data-act="settings" aria-label="Settings"><svg><use href="#i-gear"/></svg></button>
+        <span class="volume only-tablet">
+          <button class="icon plain" data-act="vol-down" aria-label="Volume down"><svg><use href="#i-chev-l"/></svg></button>
+          <svg class="vol-icon"><use href="#i-volume"/></svg>
+          <button class="icon plain" data-act="vol-up" aria-label="Volume up"><svg><use href="#i-chev-r"/></svg></button>
+        </span>
+        <button class="tab only-phone" data-act="settings" aria-label="Controls"><svg><use href="#i-gear"/></svg></button>
       </div>
     </nav>
   </div>

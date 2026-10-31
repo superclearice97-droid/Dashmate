@@ -8,6 +8,7 @@ const DEFAULTS = {
   units: defaultUnits(typeof navigator !== 'undefined' ? navigator.language : 'en-US'),
   theme: 'auto',            // auto | light | dark
   carColor: '#eef0f3',
+  volume: 0.6,              // DashMate's own sounds: music and spoken directions
   voice: true,              // spoken directions
   chimes: true,             // alert sounds
   overBy: 5,                // "Slow down" when this much over the limit (in the user's units)

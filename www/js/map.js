@@ -2,7 +2,7 @@
 import { emit } from './bus.js';
 
 const STYLES = {
-  light: 'https://tiles.openfreemap.org/styles/liberty',
+  light: 'https://tiles.openfreemap.org/styles/positron',
   dark: 'https://tiles.openfreemap.org/styles/dark',
 };
 

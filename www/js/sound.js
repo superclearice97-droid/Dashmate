@@ -21,7 +21,7 @@ export function chime(kind) {
     o.type = 'sine';
     o.frequency.value = f;
     g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.35, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.01, 0.4 * settings.volume), t + 0.02);
     g.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
     o.connect(g).connect(ctx.destination);
     o.start(t);
@@ -33,6 +33,7 @@ export function speak(text) {
   if (!settings.voice || !('speechSynthesis' in window) || !text) return;
   const u = new SpeechSynthesisUtterance(text);
   u.rate = 1.02;
+  u.volume = settings.volume;
   u.lang = navigator.language || 'en-US';
   speechSynthesis.cancel();
   speechSynthesis.speak(u);

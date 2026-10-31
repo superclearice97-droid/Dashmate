@@ -120,6 +120,10 @@ export function toggleShuffle() {
   publish();
 }
 
+export function setVolume(v) {
+  audio.volume = Math.min(1, Math.max(0, v));
+}
+
 export function seek(fraction) {
   if (audio.duration) audio.currentTime = fraction * audio.duration;
 }

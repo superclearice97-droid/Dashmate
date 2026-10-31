@@ -12,7 +12,7 @@ export const PRIVACY = `
 </ul>
 <h4>Phone ⇄ screen pairing</h4>
 <p>A direct, encrypted connection between your own two devices. No server is involved; the QR codes you scan contain everything needed.</p>
-<h4>Online features (each can be switched off in Settings)</h4>
+<h4>Online features (each can be switched off in Controls)</h4>
 <ul>
   <li><b>Map</b>: map pieces come from OpenFreeMap (tiles.openfreemap.org), which sees which area you are looking at.</li>
   <li><b>Directions &amp; search</b>: your search text and approximate area (about 1 km) go to Photon by komoot (photon.komoot.io); your start and destination go to the OSRM route server run by FOSSGIS (routing.openstreetmap.de).</li>
@@ -25,7 +25,7 @@ export const PRIVACY = `
 <h4>Children</h4>
 <p>DashMate is meant for drivers and is not directed at children.</p>
 <h4>Deleting your data</h4>
-<p>Settings › Forget my songs removes stored music. Uninstalling the app removes everything.</p>
+<p>Controls (car button) › Forget my songs removes stored music. Uninstalling the app removes everything.</p>
 <h4>Questions</h4>
 <p>Open an issue on the DashMate GitHub page.</p>
 `;

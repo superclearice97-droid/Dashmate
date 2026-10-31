@@ -13,7 +13,7 @@ DashMate has no accounts, no ads, no analytics and no tracking. The developer ne
 
 A direct, encrypted connection between your own two devices. No server is involved; the QR codes you scan contain everything needed.
 
-## Online features (each can be switched off in Settings)
+## Online features (each can be switched off in Controls)
 
 - **Map**: map pieces come from OpenFreeMap (tiles.openfreemap.org), which sees which area you are looking at.
 - **Directions & search**: your search text and approximate area (about 1 km) go to Photon by komoot (photon.komoot.io); your start and destination go to the OSRM route server run by FOSSGIS (routing.openstreetmap.de).
@@ -32,7 +32,7 @@ DashMate is meant for drivers and is not directed at children.
 
 ## Deleting your data
 
-Settings › Forget my songs removes stored music. Uninstalling the app removes everything.
+Controls (car button) › Forget my songs removes stored music. Uninstalling the app removes everything.
 
 ## Questions
 

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.2.0 — 2026-10-31
+
+Closer to a modern EV dashboard.
+
+- Car view fills the left panel: multi-lane road that fades into the distance, with the cars, people and traffic lights seen by road reading drawn around your car (experimental, like road reading itself). The demo drive simulates traffic so you can see it at home.
+- P R N D gear strip, guessed from movement.
+- Auto look now follows sunrise and sunset at your position (computed on the device).
+- Navigate bar at the top of the map; turn card with arrival time, minutes and distance; tap it for the full list of turns.
+- Media card on the map; bottom bar with car button (Controls), apps and volume ‹ ›.
+- New Controls screen with trip distance, average and top speed (and Reset trip), plus a volume setting.
+- Quieter grey day map (OpenFreeMap Positron).
+
 ## 0.1.0 — 2026-10-31
 
 First version.

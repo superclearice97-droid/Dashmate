@@ -3,14 +3,17 @@
 A car dashboard for the device you already have. Mount an iPad, iPhone or Android phone/tablet in the car and get:
 
 - **Your speed, big**, with the **speed limit** sign next to it (from OpenStreetMap), and a **"Slow down"** alert when you're over it.
-- **Your car in 3D** on a road whose lane lines move with your real speed.
+- **A modern EV-style layout**: car view on the left, full map on the right, media card on the map, and a bottom bar with apps and volume.
+- **Your car in 3D** on a multi-lane road whose lane lines move with your real speed. With road reading on, the **cars, people and traffic lights the camera sees appear around your car** where they are.
+- **P R N D gear strip**: DashMate can't read your car, so it guesses from movement (D while driving or briefly stopped, P after two minutes parked).
+- **Day and night look** that switches at sunrise and sunset where you are (worked out on the device, no internet).
 - **Turn-by-turn directions** on a 3D map, with spoken instructions, arrival time and automatic rerouting.
 - **Your music**: play songs stored on the device, or jump to your music app.
-- **Trip numbers**: distance, average and top speed.
+- **Trip numbers** (distance, average and top speed) under the car button › Controls.
 - **Drive Mode on phones**: works upright or sideways.
 - **Phone as the GPS** for a Wi-Fi-only iPad (experimental): pair once with two QR codes and the iPad uses the phone's location.
 - **Road reading** (experimental): the phone's camera spots cars, people and traffic lights on the device, tells you when a red light turns green while you're stopped, and shows the car ahead in the 3D view.
-- **Demo drive** (Settings › Try it) to see everything at home.
+- **Demo drive** (car button › Controls › Try it) to see everything at home.
 
 It is free and open source, has no accounts, ads or analytics, and every online feature can be switched off. See [PRIVACY.md](PRIVACY.md).
 
@@ -23,8 +26,8 @@ Step-by-step install instructions: [docs/INSTALL.md](docs/INSTALL.md).
 
 | Feature | Status |
 |---|---|
-| Speed, trip numbers, speed-limit parsing, "Slow down" logic, navigation progress, rerouting trigger, spoken cue timing, detection maths, pairing codes | Covered by unit tests (`npm test`) |
-| iPad and phone layouts, light/dark, demo drive, settings, music panel, pairing screens | Checked in a desktop browser at iPad and iPhone sizes |
+| Speed, trip numbers, speed-limit parsing, "Slow down" logic, navigation progress, rerouting trigger, spoken cue timing, detection maths, pairing codes, sunrise/sunset, placing detections on the road, gear guess | Covered by unit tests (`npm test`) |
+| iPad and phone layouts, light/dark, demo drive (with simulated traffic), turn list, Controls, music panel, pairing screens | Checked in a desktop browser at iPad and iPhone sizes |
 | Live map tiles, routing, search, speed limits from the internet | Built to each service's public API; not tried on a real drive yet |
 | **Phone ⇄ iPad pairing** | **Experimental**: not yet tried on real devices |
 | **Road reading (camera)** | **Experimental**: detection and light colour checked on street-video frames (~90 ms/frame in a desktop browser); not yet tried on real devices; misses small, distant lights; not a safety system |
@@ -43,7 +46,7 @@ Third-party libraries are installed from npm at the pinned versions in `package.
 ```bash
 npm install
 npm run vendor
-npm run serve     # http://localhost:8080 (use Settings › Try it › Start demo drive)
+npm run serve     # http://localhost:8080 (car button › Controls › Start demo drive)
 npm test
 ```
 
@@ -63,4 +66,4 @@ Map data © [OpenStreetMap](https://www.openstreetmap.org/copyright) contributor
 - [Third-party notices](THIRD_PARTY_NOTICES.md)
 - DashMate's own code: [MIT License](LICENSE)
 
-DashMate is an independent project, not affiliated with Apple, Google, any car maker or any music service.
+DashMate is an independent project, not affiliated with Apple, Google, Tesla or any other car maker, or any music service. Its look follows common in-car dashboard conventions with its own original artwork, icons and sounds.

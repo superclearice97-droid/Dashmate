@@ -1,5 +1,12 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.5.0
+- Controls screen modelled on an EV's: settings search, quick-control tiles, categories, all over the map with the car view still showing
+- Trip A / Trip B that keep counting across drives
+- Speed limit warning Off / Display / Chime; green traffic light chime on/off
+- Avoid highways / tolls / ferries (falls back to the normal route if the server can't; not yet tried against the live server)
+- 12/24-hour clock; reset all settings
+
 ### New in 0.4.0
 - Road reading **Detail** switch: Fast, or Detailed (larger built-in model that spots smaller, farther things; about one update a second). Checked with street video fed in as the camera; not yet tried on real phones (**experimental**)
 - "Green · go" alert now also works when updates are slow
@@ -20,7 +27,7 @@
 - Music player for songs on your device, plus shortcuts to music apps
 - Trip distance, average and top speed
 - Phone Drive Mode, upright or sideways; light and dark looks
-- Demo drive (car button › Controls › Try it)
+- Demo drive (car button › Controls › Software)
 - **Experimental:** phone-as-GPS pairing for Wi-Fi-only iPads (not yet tried on real devices)
 - **Experimental:** road reading with the camera: identifies vehicles, bikes, people, animals, traffic lights and stop signs; "Green · go" (not yet tried on real devices; not a safety system)
 

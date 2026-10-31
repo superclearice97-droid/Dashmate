@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.5.0 — 2026-10-31
+
+- New **Controls** screen in the style of an EV's settings: it opens over the map so the car view stays visible, with a settings search, quick-control tiles and categories (Display, Navigation, Speed & alerts, Road reading, Trips, Sound & media, Phone pairing, Privacy, Software). Full screen on phones.
+- **Trip A / Trip B** odometers that keep counting across drives (stored on the device), alongside the current drive.
+- **Speed limit warning**: Off / Display / Chime, plus the offset.
+- **Green traffic light chime** can be switched off.
+- **Avoid highways, tolls, ferries** for routes; if the route server can't, you're told and get the normal route.
+- **12/24-hour clock**; **Reset all settings** (keeps trips and songs).
+
 ## 0.4.0 — 2026-10-31
 
 - Road reading has a **Detail** switch: Fast (YOLOX-Nano, as before) or Detailed (YOLOX-S, 640 px), which spots smaller and farther objects but updates about once a second. The panel shows how often it is updating. The app is about 36 MB bigger because the larger model is built in, so it works offline.

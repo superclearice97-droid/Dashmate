@@ -9,11 +9,14 @@ A car dashboard for the device you already have. Mount an iPad, iPhone or Androi
 - **Day and night look** that switches at sunrise and sunset where you are (worked out on the device, no internet).
 - **Turn-by-turn directions** on a 3D map, with spoken instructions, arrival time and automatic rerouting.
 - **Your music**: play songs stored on the device, or jump to your music app.
-- **Trip numbers** (distance, average and top speed) under the car button › Controls.
+- **Controls screen** modelled on an EV's: search box, quick-control tiles and categories (Display, Navigation, Speed & alerts, Road reading, Trips, Sound & media, Phone pairing, Privacy, Software). Only settings DashMate can really act on are shown; nothing controls the car itself.
+- **Trips**: current drive plus **Trip A and Trip B**, which keep counting across drives until you reset them (distance, driving time, average and top speed).
+- **Speed limit warning**: Off, Display or Chime, with an offset; **green traffic light chime** on/off.
+- **Avoid highways, tolls or ferries** when routing; **12/24-hour clock**.
 - **Drive Mode on phones**: works upright or sideways.
 - **Phone as the GPS** for a Wi-Fi-only iPad (experimental): pair once with two QR codes and the iPad uses the phone's location.
 - **Road reading** (experimental): the phone's camera identifies street objects on the device and labels them: **cars, trucks, buses, motorcycles, bicycles, trams/trains, people, dogs, cats, horses, traffic lights (with their colour) and stop signs**. It tells you when a red light turns green while you're stopped, and draws everything it sees around your car in the 3D view. Choose **Fast** (updates several times a second) or **Detailed** (a larger model that spots smaller, farther things but updates about once a second).
-- **Demo drive** (car button › Controls › Try it) to see everything at home.
+- **Demo drive** (car button › Controls › Software › Demo drive) to see everything at home.
 
 It is free and open source, has no accounts, ads or analytics, and every online feature can be switched off. See [PRIVACY.md](PRIVACY.md).
 
@@ -27,7 +30,8 @@ Step-by-step install instructions: [docs/INSTALL.md](docs/INSTALL.md).
 | Feature | Status |
 |---|---|
 | Speed, trip numbers, speed-limit parsing, "Slow down" logic, navigation progress, rerouting trigger, spoken cue timing, detection maths, pairing codes, sunrise/sunset, placing detections on the road, gear guess | Covered by unit tests (`npm test`) |
-| iPad and phone layouts, light/dark, demo drive (with simulated traffic), turn list, Controls, music panel, pairing screens | Checked in a desktop browser at iPad and iPhone sizes |
+| iPad and phone layouts, light/dark, demo drive (with simulated traffic), turn list, Controls (tiles, categories, search, trips), music panel, pairing screens | Checked in a desktop browser at iPad and iPhone sizes |
+| Avoid highways/tolls/ferries | Built to OSRM's `exclude` option with a fallback to the normal route; not yet tried against the live route server |
 | Live map tiles, routing, search, speed limits from the internet | Built to each service's public API; not tried on a real drive yet |
 | **Phone ⇄ iPad pairing** | **Experimental**: not yet tried on real devices |
 | **Road reading (camera)** | **Experimental**: identification, labels, light colour and Fast/Detailed switching checked end to end with street video fed in as the camera (Fast ~0.3 s, Detailed ~1.2 s per update in a desktop browser; phones are likely slower); not yet tried on real devices; misses small or distant objects and sometimes mistakes a sign or shelter for a car; not a safety system |
@@ -46,7 +50,7 @@ Third-party libraries are installed from npm at the pinned versions in `package.
 ```bash
 npm install
 npm run vendor
-npm run serve     # http://localhost:8080 (car button › Controls › Start demo drive)
+npm run serve     # http://localhost:8080 (car button › Controls › Software › Demo drive)
 npm test
 ```
 

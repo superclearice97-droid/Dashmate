@@ -376,7 +376,7 @@ on('demo', (running) => {
 function openSearch() {
   if (!settings.online.nav) {
     openSheet(`${head('Where to?')}<p>Directions are turned off. They need the internet: your search text and route go to free OpenStreetMap services.</p>
-      <div class="row-btns"><button class="btn primary" data-go-settings>Open Settings</button></div>`, (card) => {
+      <div class="row-btns"><button class="btn primary" data-go-settings>Open Controls</button></div>`, (card) => {
       $('[data-go-settings]', card).onclick = openSettings;
     });
     return;

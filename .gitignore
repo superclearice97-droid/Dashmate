@@ -2,8 +2,8 @@ node_modules/
 .cache/
 www/vendor/
 www/models/
-android/
-ios/
+/android/
+/ios/
 *.apk
 *.ipa
 *.keystore

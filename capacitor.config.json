@@ -1,0 +1,11 @@
+{
+  "appId": "io.github.superclearice97.dashmate",
+  "appName": "DashMate",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  },
+  "ios": {
+    "contentInset": "never"
+  }
+}

@@ -1,0 +1,11 @@
+node_modules/
+.cache/
+www/vendor/
+www/models/
+android/
+ios/
+*.apk
+*.ipa
+*.keystore
+*.jks
+test-output/

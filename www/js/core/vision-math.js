@@ -25,7 +25,7 @@ export function toTensor(rgba, size = INPUT) {
 }
 
 // Decode raw YOLOX output [anchors x 85] (obj/cls already sigmoid) into boxes in input-pixel space.
-export function decode(data, size = INPUT, scoreThr = 0.35, strides = [8, 16, 32]) {
+export function decode(data, size = INPUT, scoreThr = 0.3, strides = [8, 16, 32]) {
   const ch = 85;
   const boxes = [];
   let a = 0;

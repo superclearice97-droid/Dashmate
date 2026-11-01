@@ -20,6 +20,9 @@ import { startVision, stopVision, visionRunning } from './vision.js';
 import { startAsScreen, finishAsScreen, startAsPhone, closeLink, linkRole } from './link.js';
 import { openCamera, closeCamera, loadScript } from './camera.js';
 import { qrSvg, scanQr } from './qr.js';
+import { initSystemMusic, systemStatus, systemNow, requestSystemAccess, controlSystem, systemPlaylists, playSystemPlaylist } from './media.js';
+import { pickSource } from './core/media-source.js';
+import { pairLink, extractPairCode } from './core/pairing-code.js';
 import { PRIVACY, TERMS, LICENSES } from './legal.js';
 
 const $ = (s, root = document) => root.querySelector(s);
@@ -433,12 +436,74 @@ function openSearch() {
 }
 
 // ---------------------------------------------------------------- music UI
-on('music', (m) => {
+// The media cards show DashMate's own player or the music app playing on the device.
+let localMusic = { track: null, playing: false };
+const mediaSource = () => pickSource(localMusic, systemNow());
+
+function renderMedia() {
+  const src = mediaSource();
+  const sys = systemNow();
+  const hint = systemStatus()?.allowed ? 'Play music in any app, or add songs' : 'Tap ♪ to add songs';
+  const title = src === 'system' ? sys.title || sys.app : localMusic.track?.title ?? 'No music yet';
+  const sub = src === 'system' ? [sys.artist, sys.app].filter(Boolean).join(' · ') : localMusic.track?.artist ?? hint;
+  const playing = src === 'system' ? sys.playing : localMusic.playing;
+  const art = src === 'system' && sys.artwork ? `<img src="${sys.artwork}" alt="">` : '<svg><use href="#i-music"/></svg>';
   $$('[data-music-mini]').forEach((el) => {
-    $('[data-m-title]', el).textContent = m.track ? m.track.title : 'No music yet';
-    $('[data-m-artist]', el).textContent = m.track ? m.track.artist : 'Tap ♪ to add songs';
-    $('[data-m-icon]', el).innerHTML = `<use href="${m.playing ? '#i-pause' : '#i-play'}"/>`;
+    $('[data-m-title]', el).textContent = title;
+    $('[data-m-artist]', el).textContent = sub;
+    $('[data-m-icon]', el).innerHTML = `<use href="${playing ? '#i-pause' : '#i-play'}"/>`;
+    const a = $('.art', el);
+    if (a.dataset.src !== art) {
+      a.innerHTML = art;
+      a.dataset.src = art;
+    }
   });
+  if (src === 'system' && sys.duration > 0) {
+    $$('[data-m-bar]').forEach((b) => { b.style.width = `${Math.min(100, (sys.position / sys.duration) * 100)}%`; });
+  }
+}
+
+on('system-music', renderMedia);
+on('system-music-error', (msg) => toast(msg));
+on('system-music-status', () => { renderMedia(); renderSystemPanel(); });
+
+async function renderSystemPanel() {
+  const st = systemStatus();
+  const box = $('#sys-music');
+  if (!st) return;
+  box.hidden = false;
+  const ios = st.platform === 'ios';
+  if (!st.allowed) {
+    box.innerHTML = ios
+      ? `<b>Apple Music</b><p class="muted small">See and control what's playing in Apple Music, and play your playlists from here.</p>
+         <button class="btn primary" data-sys="allow">Connect Apple Music</button>`
+      : `<b>Your music apps</b><p class="muted small">Control Spotify, Apple Music, YouTube Music and others from here. Android asks you to turn on <b>notification access</b> for DashMate. It's only used to see and control what's playing; DashMate doesn't read your notifications.</p>
+         <button class="btn primary" data-sys="allow">Allow music control</button>`;
+    return;
+  }
+  if (!ios) {
+    box.innerHTML = '<b>Your music apps</b><p class="muted small">Start music in Spotify, Apple Music, YouTube Music or another app once; then control it from DashMate.</p>';
+    return;
+  }
+  const lists = await systemPlaylists();
+  box.innerHTML = `<b>Apple Music playlists</b>
+    <p class="muted small">Spotify and other apps can't be controlled by other apps on iPad and iPhone; use their own controls.</p>
+    <ul class="list">${lists.length ? lists.map((l) => `<li data-pl="${esc(l.id)}"><svg><use href="#i-music"/></svg><span class="t"><b>${esc(l.name)}</b><span>${l.count} songs</span></span></li>`).join('') : '<li class="empty">No playlists in your library.</li>'}</ul>`;
+}
+
+$('#sys-music').addEventListener('click', async (e) => {
+  if (e.target.closest('[data-sys="allow"]')) {
+    await requestSystemAccess();
+    renderSystemPanel();
+    return;
+  }
+  const pl = e.target.closest('[data-pl]');
+  if (pl) playSystemPlaylist(pl.dataset.pl);
+});
+
+on('music', (m) => {
+  localMusic = m;
+  renderMedia();
   $$('[data-act="shuffle"]').forEach((b) => b.classList.toggle('on', m.shuffle));
   const list = $('#track-list');
   list.innerHTML = m.tracks.length
@@ -448,6 +513,7 @@ on('music', (m) => {
     : '<li class="empty">Add songs from this device (MP3, M4A, FLAC…). They stay on this device.</li>';
 });
 on('music-time', ({ position, duration }) => {
+  if (mediaSource() !== 'local') return;
   const pct = duration ? (position / duration) * 100 : 0;
   $$('[data-m-bar]').forEach((b) => { b.style.width = `${pct}%`; });
 });
@@ -496,7 +562,10 @@ function openPair() {
   }
   const phone = app.dataset.layout === 'phone';
   openSheet(`${head('Pair phone and screen <span class="tag">Experimental</span>')}
-    <p>Use your phone as the GPS (and road camera) for a Wi-Fi-only iPad or tablet. Turn on the phone's <b>Personal Hotspot</b>, join it from the tablet, then open this on both.</p>
+    <p>Use your phone as the GPS (and road camera) for a Wi-Fi-only iPad or tablet.</p>
+    <ol class="small steps"><li>Install DashMate on the phone too (same download as this one).</li>
+    <li>Turn on the phone's <b>Personal Hotspot</b> and join it from the tablet.</li>
+    <li>On the tablet tap <b>This is the screen</b>, then point the <b>phone's normal camera</b> at the code. It opens DashMate on the phone.</li></ol>
     <p class="muted small">Direct and encrypted between your two devices. No server, no account.</p>
     <div class="row-btns">
       <button class="btn ${phone ? '' : 'primary'}" data-role="screen">This is the screen</button>
@@ -504,7 +573,7 @@ function openPair() {
     </div>`, (card) => {
     card.addEventListener('click', (e) => {
       const b = e.target.closest('[data-role]');
-      if (b) (b.dataset.role === 'screen' ? pairAsScreen : pairAsPhone)();
+      if (b) (b.dataset.role === 'screen' ? pairAsScreen() : pairAsPhone());
     });
   });
 }
@@ -518,7 +587,7 @@ function pairAsScreen() {
   let stopScan = null;
   const card = openSheet(pairSheet('Pair · screen', `
     <div class="qr-wrap"><div class="qr" data-qr><span class="muted small">Making code…</span></div>
-    <div><div class="scan"><video playsinline muted></video></div><p class="small">1. Scan this code with the phone.<br>2. Then hold the phone's code up to this camera.</p></div></div>`), () => () => {
+    <div><div class="scan"><video playsinline muted></video></div><p class="small">1. Point your <b>phone's camera app</b> at this code. It opens DashMate on the phone (DashMate must be installed there).<br>2. Then hold the code the phone shows up to this camera.</p></div></div>`), () => () => {
     stopScan?.();
     closeCamera($('video', card));
   });
@@ -528,11 +597,11 @@ function pairAsScreen() {
       // Opening the camera first also lets WebRTC use real local addresses on the hotspot.
       await openCamera($('video', card), 'user');
       const code = await startAsScreen();
-      $('[data-qr]', card).innerHTML = qrSvg(code);
-      stopScan = await scanQr($('video', card), (t) => t.startsWith('DM1:'), async (t) => {
+      $('[data-qr]', card).innerHTML = qrSvg(pairLink(code));
+      stopScan = await scanQr($('video', card), (t) => !!extractPairCode(t), async (t) => {
         try {
           status.textContent = 'Connecting…';
-          await finishAsScreen(t);
+          await finishAsScreen(extractPairCode(t));
         } catch (err) {
           status.textContent = err.message;
         }
@@ -543,7 +612,8 @@ function pairAsScreen() {
   })();
 }
 
-function pairAsPhone() {
+// code: the screen's code when DashMate was opened from it by the phone's camera app.
+function pairAsPhone(code = null) {
   if (visionRunning()) stopVision();
   let stopScan = null;
   const card = openSheet(pairSheet('Pair · phone', `
@@ -553,22 +623,27 @@ function pairAsPhone() {
     closeCamera($('video', card));
   });
   const status = $('[data-status]', card);
+  const reply = async (screenCode) => {
+    try {
+      status.textContent = 'Making reply code…';
+      const answer = await startAsPhone(screenCode);
+      closeCamera($('video', card));
+      $('[data-step1]', card).hidden = true;
+      $('[data-step2]', card).hidden = false;
+      $('[data-qr]', card).innerHTML = qrSvg(pairLink(answer));
+      status.textContent = 'Waiting for the screen…';
+    } catch (err) {
+      status.textContent = err.message;
+    }
+  };
+  if (code) {
+    reply(code);
+    return;
+  }
   (async () => {
     try {
       await openCamera($('video', card), 'environment');
-      stopScan = await scanQr($('video', card), (t) => t.startsWith('DM1:'), async (t) => {
-        try {
-          status.textContent = 'Making reply code…';
-          const reply = await startAsPhone(t);
-          closeCamera($('video', card));
-          $('[data-step1]', card).hidden = true;
-          $('[data-step2]', card).hidden = false;
-          $('[data-qr]', card).innerHTML = qrSvg(reply);
-          status.textContent = 'Waiting for the screen…';
-        } catch (err) {
-          status.textContent = err.message;
-        }
-      });
+      stopScan = await scanQr($('video', card), (t) => !!extractPairCode(t), (t) => reply(extractPairCode(t)));
     } catch (err) {
       status.textContent = err.name === 'NotAllowedError' ? 'Camera permission is needed to read the screen’s code.' : err.message;
     }
@@ -586,7 +661,7 @@ on('link', (s) => {
 });
 
 // ---------------------------------------------------------------- controls (settings)
-const VERSION = '0.5.0';
+const VERSION = '0.6.0';
 const TRIPS_KEY = 'dashmate.trips.v1';
 let tripLog;
 try { tripLog = new TripLog(JSON.parse(localStorage.getItem(TRIPS_KEY) || 'null')); } catch { tripLog = new TripLog(); }
@@ -731,9 +806,9 @@ document.addEventListener('click', (e) => {
     case 'pitch': return mapView.toggle3d();
     case 'zoom-in': return mapView.zoomBy(1);
     case 'zoom-out': return mapView.zoomBy(-1);
-    case 'play': return music.togglePlay();
-    case 'next': return music.next();
-    case 'prev': return music.prev();
+    case 'play': return mediaSource() === 'system' ? controlSystem('toggle') : music.togglePlay();
+    case 'next': return mediaSource() === 'system' ? controlSystem('next') : music.next();
+    case 'prev': return mediaSource() === 'system' ? controlSystem('previous') : music.prev();
     case 'shuffle': return music.toggleShuffle();
     case 'mute': {
       const on = !(settings.voice || settings.chimes);
@@ -799,6 +874,24 @@ function onboarding(done) {
   step1();
 }
 
+// dashmate://pair?c=… opened by the phone's camera app: go straight to the phone's reply code.
+let ready = false;
+let pendingPairCode = null;
+function handleLink(url) {
+  const code = extractPairCode(url);
+  if (!code) return;
+  if (ready) pairAsPhone(code);
+  else pendingPairCode = code; // after the first-run screens
+}
+function listenForLinks() {
+  if (!isNative()) return;
+  try {
+    const App = window.Capacitor.registerPlugin('App');
+    App.addListener('appUrlOpen', ({ url }) => handleLink(url));
+    App.getLaunchUrl().then((r) => r?.url && handleLink(r.url)).catch(() => {});
+  } catch { /* App plugin missing: scanning inside DashMate still works */ }
+}
+
 async function boot() {
   layout();
   window.addEventListener('resize', layout);
@@ -820,9 +913,16 @@ async function boot() {
   const go = () => {
     setupMap();
     music.initMusic();
+    initSystemMusic();
     startDeviceGps();
     keepAwake();
+    ready = true;
+    if (pendingPairCode) {
+      pairAsPhone(pendingPairCode);
+      pendingPairCode = null;
+    }
   };
+  listenForLinks();
   if (settings.acceptedTerms >= TERMS_VERSION) go();
   else onboarding(go);
   emit('ready');

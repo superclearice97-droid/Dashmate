@@ -150,7 +150,8 @@ svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
   background: var(--card); border-radius: 16px; padding: 10px 12px; box-shadow: 0 1px 3px rgba(0,0,0,.08);
   outline: 2px solid color-mix(in srgb, var(--accent) 70%, transparent); outline-offset: -2px;
 }
-.music-mini .art { width: 46px; height: 46px; border-radius: 11px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #34d399, #059669); grid-row: span 2; }
+.music-mini .art img, .media-card .art img { width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+.music-mini .art { overflow: hidden; width: 46px; height: 46px; border-radius: 11px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #34d399, #059669); grid-row: span 2; }
 .music-mini .meta { min-width: 0; display: flex; flex-direction: column; }
 .music-mini .meta b, .music-mini .meta span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .music-mini .meta span { font-size: 12.5px; color: var(--muted); }
@@ -242,7 +243,7 @@ svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
   display: grid; grid-template-columns: 52px 1fr auto; grid-template-rows: auto auto; align-items: center; gap: 4px 12px;
   background: var(--card); border-radius: 14px; padding: 10px 10px 10px 10px; box-shadow: var(--shadow);
 }
-.media-card .art { width: 52px; height: 52px; border-radius: 9px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #3b82f6, #8b5cf6); grid-row: span 2; }
+.media-card .art { overflow: hidden; width: 52px; height: 52px; border-radius: 9px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #3b82f6, #8b5cf6); grid-row: span 2; }
 .media-card .meta { min-width: 0; display: flex; flex-direction: column; }
 .media-card .meta b, .media-card .meta span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .media-card .meta span { font-size: 12.5px; color: var(--muted); }
@@ -396,3 +397,9 @@ svg { width: 22px; height: 22px; fill: currentColor; flex: none; }
 #app[data-layout="phone"] .ctl-nav button { white-space: nowrap; padding: 8px 12px; }
 #app[data-layout="phone"] .ctl-content { padding: 10px 16px 30px; }
 #app[data-layout="phone"] .trip-card .trip-row { grid-template-columns: repeat(2, 1fr); }
+
+.sys-music { padding: 10px 0; border-top: 1px solid var(--line); margin-top: 6px; }
+.sys-music p { margin: 4px 0 8px; }
+.sys-music .list { max-height: 220px; }
+.steps { padding-left: 20px; margin: 6px 0; }
+.steps li { margin: 4px 0; }

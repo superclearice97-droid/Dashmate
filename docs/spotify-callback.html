@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Back to DashMate</title>
+<style>
+  body { font: 17px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f4f5f7; color: #111; }
+  main { max-width: 420px; padding: 24px; text-align: center; }
+  a.btn { display: inline-block; margin-top: 12px; padding: 14px 22px; border-radius: 14px; background: #2f6bff; color: #fff; font-weight: 600; text-decoration: none; }
+  p.small { color: #6b7280; font-size: 14px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Back to DashMate</h1>
+  <p id="msg">Opening DashMate…</p>
+  <a id="go" class="btn" href="#" hidden>Open DashMate</a>
+  <p class="small">This page only passes Spotify's sign-in result to the DashMate app on this device. It stores nothing and loads nothing else. The one-time code is useless without a secret that only your device has.</p>
+</main>
+<script>
+  // Relay for "Connect Spotify". Spotify only accepts https return addresses, so it sends
+  // the sign-in result here, and this page hands it to the app via its dashmate:// link.
+  (function () {
+    var q = new URLSearchParams(location.search);
+    var keep = new URLSearchParams();
+    ['code', 'state', 'error'].forEach(function (k) {
+      var v = q.get(k);
+      if (v && /^[\w.~-]{1,1000}$/.test(v)) keep.set(k, v);
+    });
+    var go = document.getElementById('go');
+    if (!keep.has('state')) {
+      document.getElementById('msg').textContent = 'Nothing to pass to DashMate. You can close this page.';
+      return;
+    }
+    var link = 'dashmate://spotify-callback?' + keep.toString();
+    if (/Android/i.test(navigator.userAgent)) {
+      link = 'intent://spotify-callback?' + keep.toString() + '#Intent;scheme=dashmate;package=io.github.superclearice97.dashmate;end';
+    }
+    go.href = link;
+    go.hidden = false;
+    document.getElementById('msg').textContent = 'If DashMate doesn’t open by itself, tap the button.';
+    location.replace(link);
+  })();
+</script>
+</body>
+</html>

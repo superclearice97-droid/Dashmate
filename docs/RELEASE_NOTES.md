@@ -1,5 +1,8 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.7.0
+- **Connect Spotify** (**experimental**, not yet tried with a real account): control Spotify on any of your devices and play your Spotify playlists from DashMate. Needs Spotify Premium and a one-time owner setup (docs/SPOTIFY-SETUP.md); until then the Music panel says it isn't set up. DashMate's own player keeps working alongside.
+
 ### New in 0.6.0
 - Control your music apps from the media card (**experimental**, not yet tried on real devices): Android works with Spotify, Apple Music, YouTube Music and more (turn on notification access once); iPad/iPhone controls Apple Music and plays your playlists
 - Pairing fix: scan the iPad's code with the phone's normal camera and DashMate opens on the phone (install DashMate on the phone too)

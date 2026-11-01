@@ -18,6 +18,7 @@ A direct, encrypted connection between your own two devices. No server is involv
 - **Map**: map pieces come from OpenFreeMap (tiles.openfreemap.org), which sees which area you are looking at.
 - **Directions & search**: your search text and approximate area (about 1 km) go to Photon by komoot (photon.komoot.io); your start and destination go to the OSRM route server run by FOSSGIS (routing.openstreetmap.de).
 - **Speed limits & street names**: your current position is sent every few hundred metres to the Overpass API (overpass-api.de).
+- **Spotify** (off until you tap Connect Spotify): you sign in on Spotify's own page; DashMate never sees your password. While DashMate is open and connected, it asks Spotify what's playing every few seconds and sends your play/pause/skip and playlist taps. Your Spotify access keys are kept only on this device; Disconnect Spotify deletes them. Spotify's privacy policy applies to what Spotify receives.
 - **Weather** (off by default): your position rounded to about 10 km goes to Open-Meteo (api.open-meteo.com).
 
 Like any website, these services also see your device's IP address. Their own privacy policies apply. DashMate sends them no name, account or device identifier.

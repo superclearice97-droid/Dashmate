@@ -17,6 +17,7 @@ export const PRIVACY = `
   <li><b>Map</b>: map pieces come from OpenFreeMap (tiles.openfreemap.org), which sees which area you are looking at.</li>
   <li><b>Directions &amp; search</b>: your search text and approximate area (about 1 km) go to Photon by komoot (photon.komoot.io); your start and destination go to the OSRM route server run by FOSSGIS (routing.openstreetmap.de).</li>
   <li><b>Speed limits &amp; street names</b>: your current position is sent every few hundred metres to the Overpass API (overpass-api.de).</li>
+  <li><b>Spotify</b> (off until you tap Connect Spotify): you sign in on Spotify's own page; DashMate never sees your password. While DashMate is open and connected, it asks Spotify what's playing every few seconds and sends your play/pause/skip and playlist taps. Your Spotify access keys are kept only on this device; Disconnect Spotify deletes them. Spotify's privacy policy applies to what Spotify receives.</li>
   <li><b>Weather</b> (off by default): your position rounded to about 10 km goes to Open-Meteo (api.open-meteo.com).</li>
 </ul>
 <p>Like any website, these services also see your device's IP address. Their own privacy policies apply. DashMate sends them no name, account or device identifier.</p>
@@ -52,7 +53,9 @@ export const TERMS = `
 <h4>Third-party services</h4>
 <p>Online features rely on free public services (OpenFreeMap, OSRM/FOSSGIS, Photon/komoot, Overpass API, Open-Meteo) that may change, limit or stop service at any time. Map data © OpenStreetMap contributors (ODbL).</p>
 <h4>Trademarks</h4>
-<p>DashMate is an independent project. It is not affiliated with or endorsed by Apple, Google, any car maker, or any music service. Names of other apps are used only to describe what DashMate can open.</p>
+<p>DashMate is an independent project. It is not affiliated with or endorsed by Apple, Google, Spotify, any car maker, or any music service. Names of other apps are used only to describe what DashMate can open or control.</p>
+<h4>Spotify</h4>
+<p>Spotify content, names and cover art belong to Spotify and its licensors and are shown as Spotify provides them. Using Spotify through DashMate is subject to Spotify's own terms. Controlling playback needs Spotify Premium.</p>
 `;
 
 export const LICENSES = `

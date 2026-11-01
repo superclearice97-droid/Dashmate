@@ -24,4 +24,8 @@ Online features rely on free public services (OpenFreeMap, OSRM/FOSSGIS, Photon/
 
 ## Trademarks
 
-DashMate is an independent project. It is not affiliated with or endorsed by Apple, Google, any car maker, or any music service. Names of other apps are used only to describe what DashMate can open.
+DashMate is an independent project. It is not affiliated with or endorsed by Apple, Google, Spotify, any car maker, or any music service. Names of other apps are used only to describe what DashMate can open or control.
+
+## Spotify
+
+Spotify content, names and cover art belong to Spotify and its licensors and are shown as Spotify provides them. Using Spotify through DashMate is subject to Spotify's own terms. Controlling playback needs Spotify Premium.

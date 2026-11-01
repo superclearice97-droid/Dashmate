@@ -10,7 +10,8 @@ A car dashboard for the device you already have. Mount an iPad, iPhone or Androi
 - **Turn-by-turn directions** on a 3D map, with spoken instructions, arrival time and automatic rerouting.
 - **Your music**: play songs stored on the device, and **control the music app that's playing** from DashMate's media card (song, artist, album art, play/pause/skip):
   - **Android**: works with Spotify, Apple Music, YouTube Music and other apps, after you turn on notification access for DashMate once.
-  - **iPad/iPhone**: Apple Music, including your library playlists. Apple doesn't let apps control other music apps (like Spotify) on iOS.
+  - **iPad/iPhone**: Apple Music, including your library playlists. Apple doesn't let apps control other music apps on iOS, so Spotify works through **Connect Spotify** instead.
+  - **Connect Spotify** (any device, optional): sign in once and control Spotify on any of your devices, and play your Spotify playlists. Needs Spotify Premium and a one-time setup by the DashMate owner: see [docs/SPOTIFY-SETUP.md](docs/SPOTIFY-SETUP.md). DashMate's own player for songs on the device keeps working alongside.
 - **Controls screen** modelled on an EV's: search box, quick-control tiles and categories (Display, Navigation, Speed & alerts, Road reading, Trips, Sound & media, Phone pairing, Privacy, Software). Only settings DashMate can really act on are shown; nothing controls the car itself.
 - **Trips**: current drive plus **Trip A and Trip B**, which keep counting across drives until you reset them (distance, driving time, average and top speed).
 - **Speed limit warning**: Off, Display or Chime, with an offset; **green traffic light chime** on/off.
@@ -36,6 +37,7 @@ Step-by-step install instructions: [docs/INSTALL.md](docs/INSTALL.md).
 | Avoid highways/tolls/ferries | Built to OSRM's `exclude` option with a fallback to the normal route; not yet tried against the live route server |
 | Live map tiles, routing, search, speed limits from the internet | Built to each service's public API; not tried on a real drive yet |
 | **Phone ⇄ iPad pairing** | **Experimental**: the pairing link and reply flow are tested in a browser with simulated app links; the connection itself not yet confirmed on real devices |
+| **Connect Spotify** | **Experimental**: sign-in (PKCE), token exchange, playback control and playlists tested in a browser against simulated Spotify servers; the relay page tested for iPad, Android and bad input; not yet tried with a real Spotify account |
 | **Music app control** | **Experimental**: screen logic tested in a browser with a simulated native plugin; the Android and iOS native code is compiled by the build but not yet tried on real devices |
 | **Road reading (camera)** | **Experimental**: identification, labels, light colour and Fast/Detailed switching checked end to end with street video fed in as the camera (Fast ~0.3 s, Detailed ~1.2 s per update in a desktop browser; phones are likely slower); not yet tried on real devices; misses small or distant objects and sometimes mistakes a sign or shelter for a car; not a safety system |
 

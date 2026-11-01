@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.7.0 — 2026-11-01
+
+- **Connect Spotify** (optional, experimental): control Spotify on any of your devices from DashMate's media card (song, artist, cover art, which device, play/pause/skip) and start your Spotify playlists from the Music panel. Sign-in uses Spotify's own page with PKCE, so DashMate never handles your password and stores no secret; access keys stay on the device. Needs Spotify Premium and a one-time owner setup (docs/SPOTIFY-SETUP.md).
+- Sign-in returns through a small static page on GitHub Pages (docs/spotify-callback.html), because Spotify only accepts https return addresses.
+- The media card picks what to show in this order: DashMate's own songs while they play, then the music app on this device, then Spotify; DashMate's own player is unchanged.
+- Privacy policy and terms updated for Spotify.
+
 ## 0.6.0 — 2026-11-01
 
 - **Control your music apps** from DashMate's media card: song, artist, album art, play/pause, next, previous (experimental).

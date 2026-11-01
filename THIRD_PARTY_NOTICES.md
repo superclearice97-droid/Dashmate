@@ -14,6 +14,7 @@ Versions are pinned in `package.json`; the models are pinned by SHA-256 in `scri
 | QR Code Generator | 2.0.4 | MIT | https://github.com/kazuhikoarase/qrcode-generator |
 | Capacitor (core, android, ios) | 8.5.3 | MIT | https://github.com/ionic-team/capacitor |
 | @capacitor-community/keep-awake | 8.0.1 | MIT | https://github.com/capacitor-community/keep-awake |
+| @capacitor/app | 8.1.1 | MIT | https://github.com/ionic-team/capacitor-plugins |
 
 "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.
 
@@ -223,7 +224,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Capacitor — MIT
+## Capacitor and @capacitor/app — MIT
 
 ```
 Copyright (c) 2017-present Drifty Co. (Ionic)

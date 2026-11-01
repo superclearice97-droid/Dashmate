@@ -31,12 +31,20 @@ SideStore's own guide has pictures and troubleshooting, and it is the place to c
 
 ## Using a Wi-Fi-only iPad with your phone's GPS (experimental)
 
-1. Turn on **Personal Hotspot** on the phone and connect the iPad to it. The iPad now has internet through the phone.
-2. Open DashMate on both. On the iPad tap the **pair** button (blue) › **This is the screen**. A QR code appears.
-3. On the phone tap **pair** › **This is the phone** and point the camera at the iPad's code.
-4. The phone shows its own code. Hold it up to the iPad's front camera.
-5. Both say **Paired**. The iPad now shows the phone's speed and position.
+1. **Install DashMate on the phone too** (the APK on Android, the .ipa on iPhone, as above). Open it once and accept the terms.
+2. Turn on **Personal Hotspot** on the phone and connect the iPad to it. The iPad now has internet through the phone.
+3. On the iPad tap the **pair** button (blue) › **This is the screen**. A QR code appears.
+4. Point the **phone's normal Camera app** at the iPad's code and tap the banner. It opens DashMate on the phone. (Or in DashMate on the phone: **pair** › **This is the phone**, then scan.)
+5. The phone shows its own code. Hold it up to the iPad's front camera.
+6. Both say **Paired**. The iPad now shows the phone's speed and position.
+
+If the phone says no app can open the code, DashMate isn't installed on the phone yet.
 
 To also use road reading, mount the phone so its back camera sees the road and turn on **Road reading** on the phone. The iPad shows the results.
 
 If the connection drops (for example, the hotspot turns off), pair again. Pairing needs iOS 16.4 or newer.
+
+## Controlling Spotify, Apple Music and other music apps (experimental)
+
+- **Android:** open the **Music** button › **Allow music control**, then turn on **DashMate** in the notification access list. Start music in any app once; DashMate's media card then shows and controls it. DashMate uses this permission only for media controls and doesn't read your notifications.
+- **iPad / iPhone:** open the **Music** button › **Connect Apple Music** and allow access. DashMate controls Apple Music and lists your playlists. Apple doesn't let apps control Spotify or other music apps on iOS; use their own controls (or the Control Center).

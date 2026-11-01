@@ -8,13 +8,15 @@ A car dashboard for the device you already have. Mount an iPad, iPhone or Androi
 - **P R N D gear strip**: DashMate can't read your car, so it guesses from movement (D while driving or briefly stopped, P after two minutes parked).
 - **Day and night look** that switches at sunrise and sunset where you are (worked out on the device, no internet).
 - **Turn-by-turn directions** on a 3D map, with spoken instructions, arrival time and automatic rerouting.
-- **Your music**: play songs stored on the device, or jump to your music app.
+- **Your music**: play songs stored on the device, and **control the music app that's playing** from DashMate's media card (song, artist, album art, play/pause/skip):
+  - **Android**: works with Spotify, Apple Music, YouTube Music and other apps, after you turn on notification access for DashMate once.
+  - **iPad/iPhone**: Apple Music, including your library playlists. Apple doesn't let apps control other music apps (like Spotify) on iOS.
 - **Controls screen** modelled on an EV's: search box, quick-control tiles and categories (Display, Navigation, Speed & alerts, Road reading, Trips, Sound & media, Phone pairing, Privacy, Software). Only settings DashMate can really act on are shown; nothing controls the car itself.
 - **Trips**: current drive plus **Trip A and Trip B**, which keep counting across drives until you reset them (distance, driving time, average and top speed).
 - **Speed limit warning**: Off, Display or Chime, with an offset; **green traffic light chime** on/off.
 - **Avoid highways, tolls or ferries** when routing; **12/24-hour clock**.
 - **Drive Mode on phones**: works upright or sideways.
-- **Phone as the GPS** for a Wi-Fi-only iPad (experimental): pair once with two QR codes and the iPad uses the phone's location.
+- **Phone as the GPS** for a Wi-Fi-only iPad (experimental): DashMate goes on both devices; point the phone's normal camera at the iPad's code (it opens DashMate), then show the phone's code to the iPad.
 - **Road reading** (experimental): the phone's camera identifies street objects on the device and labels them: **cars, trucks, buses, motorcycles, bicycles, trams/trains, people, dogs, cats, horses, traffic lights (with their colour) and stop signs**. It tells you when a red light turns green while you're stopped, and draws everything it sees around your car in the 3D view. Choose **Fast** (updates several times a second) or **Detailed** (a larger model that spots smaller, farther things but updates about once a second).
 - **Demo drive** (car button › Controls › Software › Demo drive) to see everything at home.
 
@@ -33,7 +35,8 @@ Step-by-step install instructions: [docs/INSTALL.md](docs/INSTALL.md).
 | iPad and phone layouts, light/dark, demo drive (with simulated traffic), turn list, Controls (tiles, categories, search, trips), music panel, pairing screens | Checked in a desktop browser at iPad and iPhone sizes |
 | Avoid highways/tolls/ferries | Built to OSRM's `exclude` option with a fallback to the normal route; not yet tried against the live route server |
 | Live map tiles, routing, search, speed limits from the internet | Built to each service's public API; not tried on a real drive yet |
-| **Phone ⇄ iPad pairing** | **Experimental**: not yet tried on real devices |
+| **Phone ⇄ iPad pairing** | **Experimental**: the pairing link and reply flow are tested in a browser with simulated app links; the connection itself not yet confirmed on real devices |
+| **Music app control** | **Experimental**: screen logic tested in a browser with a simulated native plugin; the Android and iOS native code is compiled by the build but not yet tried on real devices |
 | **Road reading (camera)** | **Experimental**: identification, labels, light colour and Fast/Detailed switching checked end to end with street video fed in as the camera (Fast ~0.3 s, Detailed ~1.2 s per update in a desktop browser; phones are likely slower); not yet tried on real devices; misses small or distant objects and sometimes mistakes a sign or shelter for a car; not a safety system |
 
 ## How it's built

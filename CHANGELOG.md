@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.6.0 — 2026-11-01
+
+- **Control your music apps** from DashMate's media card: song, artist, album art, play/pause, next, previous (experimental).
+  - Android: Spotify, Apple Music, YouTube Music and others, via the system's media controls. Needs notification access, which DashMate uses only for media controls.
+  - iPad/iPhone: Apple Music, plus your library playlists in the Music panel. iOS doesn't let apps control Spotify or other music apps.
+- **Pairing fix:** the pairing QR code is now a `dashmate://` link. Scanning it with the phone's normal camera opens DashMate (when installed) straight to the phone's reply code, instead of "no app installed". Clearer pairing steps on screen.
+- Privacy policy and notices updated for music control and the `@capacitor/app` plugin.
+
 ## 0.5.0 — 2026-10-31
 
 - New **Controls** screen in the style of an EV's settings: it opens over the map so the car view stays visible, with a settings search, quick-control tiles and categories (Display, Navigation, Speed & alerts, Road reading, Trips, Sound & media, Phone pairing, Privacy, Software). Full screen on phones.

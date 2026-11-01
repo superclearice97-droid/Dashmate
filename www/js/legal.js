@@ -22,6 +22,7 @@ export const PRIVACY = `
 <p>Like any website, these services also see your device's IP address. Their own privacy policies apply. DashMate sends them no name, account or device identifier.</p>
 <h4>Permissions</h4>
 <p>Location (speed, map, directions), camera (road reading and scanning pairing codes). You can refuse either; the rest of the app keeps working.</p>
+<p><b>Music control (optional).</b> On Android, controlling Spotify and other music apps needs <b>notification access</b>, because Android ties media controls to that permission. DashMate only uses it to see and control what's playing (song, artist, album art) and never reads your notifications. On iPad and iPhone, <b>Apple Music access</b> lets DashMate show and control what's playing and list your playlists. Nothing is sent anywhere; you can turn either off in the system settings.</p>
 <h4>Children</h4>
 <p>DashMate is meant for drivers and is not directed at children.</p>
 <h4>Deleting your data</h4>
@@ -66,6 +67,7 @@ export const LICENSES = `
   <li><b>QR Code Generator</b> 2.0.4 — MIT, © Kazuhiko Arase. "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.</li>
   <li><b>Capacitor</b> 8.5.3 — MIT, © Ionic</li>
   <li><b>@capacitor-community/keep-awake</b> 8.0.1 — MIT</li>
+  <li><b>@capacitor/app</b> 8.1.1 — MIT, © Ionic</li>
 </ul>
 <h4>Data</h4>
 <ul>

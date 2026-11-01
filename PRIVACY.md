@@ -26,6 +26,8 @@ Like any website, these services also see your device's IP address. Their own pr
 
 Location (speed, map, directions), camera (road reading and scanning pairing codes). You can refuse either; the rest of the app keeps working.
 
+**Music control (optional).** On Android, controlling Spotify and other music apps needs **notification access**, because Android ties media controls to that permission. DashMate only uses it to see and control what's playing (song, artist, album art) and never reads your notifications. On iPad and iPhone, **Apple Music access** lets DashMate show and control what's playing and list your playlists. Nothing is sent anywhere; you can turn either off in the system settings.
+
 ## Children
 
 DashMate is meant for drivers and is not directed at children.

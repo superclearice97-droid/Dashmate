@@ -2,7 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import { letterbox, toTensor, decode, nms, iou, lightColor, mainLight, countKinds, summarize, labelOf, kindOf, COCO, INPUT } from '../www/js/core/vision-math.js';
-import { encodeDescription, decodeDescription, minifySdp } from '../www/js/core/pairing-code.js';
+import { encodeDescription, decodeDescription, minifySdp, pairLink, extractPairCode } from '../www/js/core/pairing-code.js';
+import { pickSource } from '../www/js/core/media-source.js';
 
 test('vision: letterbox and tensor layout', () => {
   assert.deepEqual(letterbox(640, 480), { r: 0.65, w: 416, h: 312 });
@@ -104,4 +105,28 @@ test('pairing: code round trip keeps the fingerprint and drops TCP candidates', 
   assert.ok(back.sdp.includes('a=fingerprint:sha-256 AA:BB'));
   await assert.rejects(decodeDescription('https://example.com'), /Not a DashMate/);
   await assert.rejects(decodeDescription('DM1:AAAA'));
+});
+
+test('pairing: codes travel inside a dashmate:// link that phone cameras can open', async () => {
+  const code = await encodeDescription({ type: 'offer', sdp: SDP });
+  const link = pairLink(code);
+  assert.match(link, /^dashmate:\/\/pair\?c=DM1%3A/);
+  assert.equal(extractPairCode(link), code);
+  assert.equal(extractPairCode(code), code, 'bare codes still work');
+  assert.equal(extractPairCode('DASHMATE://pair?c=' + encodeURIComponent(code)), code);
+  assert.equal(extractPairCode('dashmate://pair?c=%E0%A4%A'), null, 'broken escape');
+  assert.equal(extractPairCode('https://example.com'), null);
+  assert.equal(extractPairCode('dashmate://pair?c=hello'), null);
+  assert.equal(extractPairCode(42), null);
+  assert.ok(link.length < 900, `QR stays scannable (${link.length} chars)`);
+});
+
+test('music: which source the dashboard shows', () => {
+  const sys = (playing) => ({ active: true, playing, title: 'X' });
+  assert.equal(pickSource({ track: {}, playing: true }, sys(true)), 'local', 'DashMate playing wins');
+  assert.equal(pickSource({ track: {}, playing: false }, sys(true)), 'system', 'another app playing');
+  assert.equal(pickSource({ track: {}, playing: false }, sys(false)), 'local', 'both paused: keep DashMate');
+  assert.equal(pickSource({ track: null, playing: false }, sys(false)), 'system', 'no local songs: show the app');
+  assert.equal(pickSource({ track: null, playing: false }, null), 'local');
+  assert.equal(pickSource(null, { active: false }), 'local');
 });

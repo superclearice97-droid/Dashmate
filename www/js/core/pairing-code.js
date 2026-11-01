@@ -43,3 +43,27 @@ export async function decodeDescription(text) {
   if ((t !== 'o' && t !== 'a') || typeof s !== 'string' || !s.startsWith('v=0')) throw new Error('Damaged pairing code');
   return { type: t === 'o' ? 'offer' : 'answer', sdp: s };
 }
+
+// QR codes carry the pairing code inside a dashmate:// link, so scanning it with the
+// phone's own camera app opens DashMate (when installed) straight into pairing.
+export const PAIR_LINK = 'dashmate://pair?c=';
+
+export function pairLink(code) {
+  return PAIR_LINK + encodeURIComponent(code);
+}
+
+// Accepts a bare code ("DM1:…") or a link; returns the code or null.
+export function extractPairCode(text) {
+  if (typeof text !== 'string') return null;
+  const t = text.trim();
+  if (t.startsWith(PREFIX)) return t;
+  if (t.toLowerCase().startsWith(PAIR_LINK)) {
+    try {
+      const code = decodeURIComponent(t.slice(PAIR_LINK.length));
+      return code.startsWith(PREFIX) ? code : null;
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}

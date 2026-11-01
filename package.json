@@ -1,6 +1,6 @@
 {
   "name": "dashmate",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "private": true,
   "description": "DashMate: a car dashboard for your iPad, iPhone and Android devices",
   "license": "MIT",
@@ -13,8 +13,10 @@
   "dependencies": {
     "@capacitor-community/keep-awake": "8.0.1",
     "@capacitor/android": "8.5.3",
+    "@capacitor/app": "8.1.1",
     "@capacitor/core": "8.5.3",
     "@capacitor/ios": "8.5.3",
+    "dashmate-media": "file:plugins/dashmate-media",
     "jsqr": "1.4.0",
     "maplibre-gl": "5.23.0",
     "onnxruntime-web": "1.22.0",

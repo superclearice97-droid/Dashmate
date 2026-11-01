@@ -1,0 +1,15 @@
+{
+  "name": "dashmate-media",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DashMate's built-in native plugin: control the music playing on the device (Android: any app via media sessions; iOS: Apple Music).",
+  "license": "MIT",
+  "main": "index.js",
+  "capacitor": {
+    "ios": { "src": "ios" },
+    "android": { "src": "android" }
+  },
+  "peerDependencies": {
+    "@capacitor/core": ">=8.0.0"
+  }
+}

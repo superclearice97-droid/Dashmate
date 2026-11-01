@@ -31,6 +31,17 @@ if (platform === 'android') {
     + `$1<uses-feature android:name="android.hardware.location.gps" android:required="false" />`
     + `$1<application`,
   ));
+  // dashmate://pair?c=… links (the pairing QR code) open DashMate.
+  edit(join(main, 'AndroidManifest.xml'), (s) => s.replace(
+    /(<\/intent-filter>)/,
+    `$1
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="dashmate" />
+            </intent-filter>`,
+  ));
   edit(join(root, 'android/app/build.gradle'), (s) => s
     .replace(/versionCode \d+/, `versionCode ${build}`)
     .replace(/versionName "[^"]*"/, `versionName "${version}"`));
@@ -53,6 +64,19 @@ if (platform === 'android') {
     /<\/dict>\s*<\/plist>\s*$/,
     `\t<key>NSLocationWhenInUseUsageDescription</key>
 \t<string>DashMate uses your location to show your speed, your position on the map and turn-by-turn directions. It stays on your device.</string>
+\t<key>NSAppleMusicUsageDescription</key>
+\t<string>DashMate shows and controls what's playing in Apple Music, and lists your playlists. Nothing is uploaded.</string>
+\t<key>CFBundleURLTypes</key>
+\t<array>
+\t\t<dict>
+\t\t\t<key>CFBundleURLName</key>
+\t\t\t<string>DashMate pairing</string>
+\t\t\t<key>CFBundleURLSchemes</key>
+\t\t\t<array>
+\t\t\t\t<string>dashmate</string>
+\t\t\t</array>
+\t\t</dict>
+\t</array>
 \t<key>NSCameraUsageDescription</key>
 \t<string>DashMate uses the camera to read pairing codes and, if you turn it on, to spot traffic lights, cars and people. Images are processed on this device and never uploaded.</string>
 </dict>

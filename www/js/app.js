@@ -22,6 +22,7 @@ import { openCamera, closeCamera, loadScript } from './camera.js';
 import { qrSvg, scanQr } from './qr.js';
 import { initSystemMusic, systemStatus, systemNow, requestSystemAccess, controlSystem, systemPlaylists, playSystemPlaylist } from './media.js';
 import { pickSource } from './core/media-source.js';
+import { initSpotify, spotifyConfigured, spotifyConnected, spotifyNow, connectSpotify, disconnectSpotify, handleSpotifyCallback, controlSpotify, spotifyPlaylists, playSpotifyPlaylist } from './spotify.js';
 import { pairLink, extractPairCode } from './core/pairing-code.js';
 import { PRIVACY, TERMS, LICENSES } from './legal.js';
 
@@ -438,16 +439,18 @@ function openSearch() {
 // ---------------------------------------------------------------- music UI
 // The media cards show DashMate's own player or the music app playing on the device.
 let localMusic = { track: null, playing: false };
-const mediaSource = () => pickSource(localMusic, systemNow());
+const mediaSource = () => pickSource(localMusic, systemNow(), spotifyNow());
 
 function renderMedia() {
   const src = mediaSource();
-  const sys = systemNow();
+  const sys = src === 'spotify' ? spotifyNow() : systemNow();
   const hint = systemStatus()?.allowed ? 'Play music in any app, or add songs' : 'Tap ♪ to add songs';
-  const title = src === 'system' ? sys.title || sys.app : localMusic.track?.title ?? 'No music yet';
-  const sub = src === 'system' ? [sys.artist, sys.app].filter(Boolean).join(' · ') : localMusic.track?.artist ?? hint;
-  const playing = src === 'system' ? sys.playing : localMusic.playing;
-  const art = src === 'system' && sys.artwork ? `<img src="${sys.artwork}" alt="">` : '<svg><use href="#i-music"/></svg>';
+  const other = src !== 'local';
+  const title = other ? sys.title || sys.app : localMusic.track?.title ?? 'No music yet';
+  const where = src === 'spotify' && sys.device ? `Spotify on ${sys.device}` : sys.app;
+  const sub = other ? [sys.artist, where].filter(Boolean).join(' · ') : localMusic.track?.artist ?? hint;
+  const playing = other ? sys.playing : localMusic.playing;
+  const art = other && sys.artwork ? `<img src="${esc(sys.artwork)}" alt="">` : '<svg><use href="#i-music"/></svg>';
   $$('[data-music-mini]').forEach((el) => {
     $('[data-m-title]', el).textContent = title;
     $('[data-m-artist]', el).textContent = sub;
@@ -458,12 +461,55 @@ function renderMedia() {
       a.dataset.src = art;
     }
   });
-  if (src === 'system' && sys.duration > 0) {
+  if (other && sys.duration > 0) {
     $$('[data-m-bar]').forEach((b) => { b.style.width = `${Math.min(100, (sys.position / sys.duration) * 100)}%`; });
   }
 }
 
 on('system-music', renderMedia);
+on('spotify-music', (now) => {
+  renderMedia();
+  const line = $('#spotify-now');
+  if (line) line.innerHTML = spotifyLine(now);
+});
+function spotifyLine(now) {
+  return `Connected. ${now.active ? `${now.playing ? 'Playing' : 'Paused'} on ${esc(now.device || 'a device')}.` : 'Start Spotify on a device, or pick a playlist.'}`
+    + (now.link ? ` <a href="${esc(now.link)}" data-open>Open in Spotify</a>` : '');
+}
+on('spotify-error', (msg) => toast(msg, 5000));
+on('spotify-status', () => { renderMedia(); renderSpotifyPanel(); refreshControls(); });
+
+// Spotify section of the Music panel.
+async function renderSpotifyPanel() {
+  const box = $('#spotify-box');
+  if (!spotifyConfigured()) {
+    box.innerHTML = '<b>Spotify</b><p class="muted small">Spotify isn’t set up in this copy of DashMate yet (its owner adds a Spotify app ID).</p>';
+    return;
+  }
+  if (!spotifyConnected()) {
+    box.innerHTML = `<b>Spotify</b><p class="muted small">Control Spotify on any of your devices and play your playlists. Signs in on Spotify’s own page. Needs Spotify Premium, and your Spotify account must be added to DashMate’s Spotify app by its owner.</p>
+      <button class="btn primary" data-spotify="connect">Connect Spotify</button>`;
+    return;
+  }
+  box.innerHTML = '<b>Spotify</b><p class="muted small">Loading your playlists…</p>';
+  let lists = [];
+  try { lists = await spotifyPlaylists(); } catch (e) { toast(e.message); }
+  const now = spotifyNow();
+  box.innerHTML = `<b>Spotify</b>
+    <p class="muted small" id="spotify-now">${spotifyLine(now)}</p>
+    <ul class="list">${lists.length ? lists.map((l) => `<li data-sp="${esc(l.uri)}"><svg><use href="#i-music"/></svg><span class="t"><b>${esc(l.name)}</b><span>${l.count} items · Spotify</span></span></li>`).join('') : '<li class="empty">No playlists found.</li>'}</ul>
+    <div class="row-btns"><button class="btn" data-spotify="disconnect">Disconnect Spotify</button></div>`;
+}
+
+$('#spotify-box').addEventListener('click', (e) => {
+  const act = e.target.closest('[data-spotify]')?.dataset.spotify;
+  if (act === 'connect') return connectSpotify(openUrl);
+  if (act === 'disconnect') { disconnectSpotify(); return toast('Spotify disconnected'); }
+  const open = e.target.closest('a[data-open]');
+  if (open) { e.preventDefault(); return openUrl(open.href); }
+  const pl = e.target.closest('[data-sp]');
+  if (pl) playSpotifyPlaylist(pl.dataset.sp);
+});
 on('system-music-error', (msg) => toast(msg));
 on('system-music-status', () => { renderMedia(); renderSystemPanel(); });
 
@@ -660,8 +706,17 @@ on('link', (s) => {
   }
 });
 
+// Play/pause/skip go to whatever the media card is showing.
+function mediaControl(action) {
+  const src = mediaSource();
+  if (src === 'system') return controlSystem(action);
+  if (src === 'spotify') return controlSpotify(action);
+  if (action === 'toggle') return music.togglePlay();
+  return action === 'next' ? music.next() : music.prev();
+}
+
 // ---------------------------------------------------------------- controls (settings)
-const VERSION = '0.6.0';
+const VERSION = '0.7.0';
 const TRIPS_KEY = 'dashmate.trips.v1';
 let tripLog;
 try { tripLog = new TripLog(JSON.parse(localStorage.getItem(TRIPS_KEY) || 'null')); } catch { tripLog = new TripLog(); }
@@ -713,6 +768,12 @@ initControls({
         saveTrips();
       }
     },
+  },
+  spotify: {
+    configured: spotifyConfigured,
+    connected: spotifyConnected,
+    connect: () => connectSpotify(openUrl),
+    disconnect: disconnectSpotify,
   },
   openApps,
   openLegal,
@@ -806,9 +867,9 @@ document.addEventListener('click', (e) => {
     case 'pitch': return mapView.toggle3d();
     case 'zoom-in': return mapView.zoomBy(1);
     case 'zoom-out': return mapView.zoomBy(-1);
-    case 'play': return mediaSource() === 'system' ? controlSystem('toggle') : music.togglePlay();
-    case 'next': return mediaSource() === 'system' ? controlSystem('next') : music.next();
-    case 'prev': return mediaSource() === 'system' ? controlSystem('previous') : music.prev();
+    case 'play': return mediaControl('toggle');
+    case 'next': return mediaControl('next');
+    case 'prev': return mediaControl('previous');
     case 'shuffle': return music.toggleShuffle();
     case 'mute': {
       const on = !(settings.voice || settings.chimes);
@@ -878,6 +939,10 @@ function onboarding(done) {
 let ready = false;
 let pendingPairCode = null;
 function handleLink(url) {
+  if (/^dashmate:\/\/spotify-callback/i.test(url)) {
+    handleSpotifyCallback(url).then((ok) => toast(ok ? 'Spotify connected' : 'Spotify didn’t connect. Try again from the Music panel.', 4000));
+    return;
+  }
   const code = extractPairCode(url);
   if (!code) return;
   if (ready) pairAsPhone(code);
@@ -914,6 +979,7 @@ async function boot() {
     setupMap();
     music.initMusic();
     initSystemMusic();
+    initSpotify();
     startDeviceGps();
     keepAwake();
     ready = true;

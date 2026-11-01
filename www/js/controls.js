@@ -87,6 +87,14 @@ function tripCard(title, t, resetId) {
   </div>`;
 }
 
+function spotifyRow() {
+  const sp = ctx.spotify;
+  if (!sp.configured()) return row('Spotify', 'Not set up in this copy of DashMate', '', 'music account');
+  return sp.connected()
+    ? row('Spotify', 'Connected. DashMate asks Spotify what’s playing while open and sends your play/skip taps', '<button class="btn" data-ctl="spotify-disconnect">Disconnect</button>', 'music account premium privacy online')
+    : row('Spotify', 'Control Spotify on any of your devices (Premium). Signs in on Spotify’s page', '<button class="btn primary" data-ctl="spotify-connect">Connect</button>', 'music account premium privacy online');
+}
+
 const RENDER = {
   quick: () => {
     const s = settings;
@@ -128,13 +136,14 @@ const RENDER = {
     + row('Voice guidance', '', sw('voice', settings.voice), 'speak directions')
     + row('Remember my songs', 'Kept only on this device', sw('rememberMusic', settings.rememberMusic), 'music library')
     + row('Stored songs', '', '<button class="btn" data-ctl="forget-songs">Forget my songs</button>', 'delete music')
+    + spotifyRow()
     + row('Music apps', 'Open Spotify, Apple Music and others', '<button class="btn" data-ctl="apps">Open an app</button>', 'spotify youtube'),
   pairing: () => {
     const role = ctx.pairing.role();
     return row(role ? `Paired as the ${role}` : 'Not paired', 'Use your phone’s GPS and camera on a Wi-Fi-only iPad. Direct and encrypted, no server.',
       `<button class="btn ${role ? '' : 'primary'}" data-ctl="pair">${role ? 'Manage' : 'Pair'}</button>`, 'bluetooth phone gps link iphone android');
   },
-  privacy: () => `${onlineFields()}<p class="muted small">Your speed, trips, music and camera images never leave your device.</p>`
+  privacy: () => `${onlineFields()}${spotifyRow()}<p class="muted small">Your speed, trips, music and camera images never leave your device.</p>`
     + row('Privacy policy', '', '<button class="btn" data-ctl="legal" data-legal="privacy">Read</button>', 'data'),
   software: () => row(`DashMate ${ctx.version}`, 'Free and open source (MIT)', `<button class="btn" data-ctl="releases">Release notes</button>`, 'version update about')
     + row('Demo drive', 'See everything working without driving', `<button class="btn" data-ctl="demo">${ctx.demo.running() ? 'Stop' : 'Start'}</button>`, 'try')
@@ -219,6 +228,8 @@ export function initControls(context) {
       case 'pair': closeControls(); return ctx.pairing.open();
       case 'demo': closeControls(); return ctx.demo.toggle();
       case 'apps': return ctx.openApps();
+      case 'spotify-connect': return ctx.spotify.connect();
+      case 'spotify-disconnect': ctx.spotify.disconnect(); return render();
       case 'color': return saveSettings({ carColor: el.dataset.color });
       case 'legal': return ctx.openLegal(el.dataset.legal);
       case 'releases': return ctx.openUrl(RELEASES_URL);

@@ -3,8 +3,7 @@
   "appName": "DashMate",
   "webDir": "www",
   "android": {
-    "allowMixedContent": false,
-    "useLegacyBridge": true
+    "allowMixedContent": false
   },
   "ios": {
     "contentInset": "never"

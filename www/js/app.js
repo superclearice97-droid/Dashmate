@@ -12,13 +12,14 @@ import { initControls, openControls, closeControls, refreshControls, seg, bindFi
 import { isDaytime } from './core/sun.js';
 import { toScene, guessGear } from './core/scene.js';
 import { summarize } from './core/vision-math.js';
-import { startDeviceGps, startDemo, stopDemo, demoRunning, demoRoute, DEMO_LINE, startBackgroundGps, stopBackgroundGps, backgroundGpsOn } from './location.js';
+import { startDeviceGps, startDemo, stopDemo, demoRunning, demoRoute, DEMO_LINE } from './location.js';
 import * as mapView from './map.js';
 import { searchPlaces, fetchRoute, fetchRoad, fetchTemperature } from './services.js';
 import * as music from './music.js';
 import { chime, speak } from './sound.js';
 import { startVision, stopVision, visionRunning } from './vision.js';
-import { startAsScreen, finishAsScreen, startAsPhone, closeLink, linkRole } from './link.js';
+import { startAsScreen, finishAsScreen, startAsPhone, closeLink, linkRole, sendBeaconOffer } from './link.js';
+import { listenForPhone, stopListening, hearingPhone, beaconListening, lastBeaconFix, startSending, stopSending, beaconSending, refreshSending } from './beacon.js';
 import { openCamera, closeCamera, loadScript } from './camera.js';
 import { qrSvg, scanQr } from './qr.js';
 import { initSystemMusic, systemStatus, systemNow, requestSystemAccess, controlSystem, systemPlaylists, playSystemPlaylist } from './media.js';
@@ -599,12 +600,20 @@ function openApps() {
 
 // ---------------------------------------------------------------- pairing
 function openPair() {
+  if (beaconSending()) return openSharingSheet('background');
+  if (!linkRole() && hearingPhone()) {
+    openSheet(`${head('Paired')}<p>This screen is getting the phone’s GPS over the background link.</p>
+      <div class="row-btns"><button class="btn danger" data-unpair>Disconnect</button></div>`, (card) => {
+      $('[data-unpair]', card).onclick = () => { stopListening(); closeSheet(); toast('Disconnected'); };
+    });
+    return;
+  }
   const role = linkRole();
   if (role) {
     openSheet(`${head('Paired')}<p>This device is connected as the <b>${role === 'phone' ? 'phone' : 'screen'}</b>.
       ${role === 'phone' ? 'It sends its GPS (and road reading, if the camera is on) to the screen.' : 'It shows the phone’s GPS and road reading.'}</p>
       <div class="row-btns"><button class="btn danger" data-unpair>Disconnect</button></div>`, (card) => {
-      $('[data-unpair]', card).onclick = () => { closeLink(); closeSheet(); toast('Disconnected'); };
+      $('[data-unpair]', card).onclick = () => { stopSharing(); stopListening(); closeSheet(); toast('Disconnected'); };
     });
     return;
   }
@@ -701,31 +710,82 @@ function pairAsPhone(code = null) {
 on('link', async (s) => {
   if (s.state === 'connected') {
     closeSheet();
-    if (s.role !== 'phone') return toast('Paired · using the phone’s GPS');
-    // The phone keeps sending with its screen off, so it can go in a pocket.
-    const background = await startBackgroundGps();
-    if (!background) startDeviceGps();
-    else setScreenAwake(false);
-    openSharingSheet(background);
-  } else if (s.state === 'lost') {
-    if (backgroundGpsOn()) {
-      await stopBackgroundGps();
-      setScreenAwake(true);
+    if (s.role === 'phone') {
+      startDeviceGps();
+      openSharingSheet('starting');
+      // A screen without the background link (web version) never sends an offer.
+      setTimeout(() => { if (sharingMode === 'starting') openSharingSheet('foreground'); }, 5000);
+      return;
     }
+    toast('Paired · using the phone’s GPS');
+    // Invite the phone to keep sending with its screen off (native background link).
+    const offer = await listenForPhone();
+    if (offer) sendBeaconOffer(offer);
+  } else if (s.state === 'lost') {
+    // The background link carries on without the pairing link.
+    if (s.role === 'phone' ? beaconSending() : hearingPhone()) return;
     toast('Pairing lost. Pair again to reconnect.');
   }
 });
 
-function openSharingSheet(background) {
-  openSheet(`${head('Sharing GPS with your screen')}
-    <p>${background
-    ? 'You can <b>lock this phone and put it away</b>. It keeps sending its location to the screen in the background, and the screen can turn off to save battery.'
-    : 'Keep DashMate open on this phone. Background sending isn’t available here, so the phone stops sending if you leave DashMate.'}</p>
-    ${background && /Android/i.test(navigator.userAgent) ? '<p class="muted small">Android shows a “DashMate is sharing GPS” notification while this runs.</p>' : ''}
-    <div class="row-btns"><button class="btn danger" data-stop-share>Stop sharing</button><button class="btn" data-close>OK</button></div>`, (card) => {
-    $('[data-stop-share]', card).onclick = () => { closeLink(); closeSheet(); };
-  });
+// Phone: the screen sent the key and address for background sending.
+on('beacon-offer', async (offer) => {
+  const r = await startSending(offer);
+  if (r === 'ok') {
+    setScreenAwake(false);
+    openSharingSheet('background');
+  } else {
+    openSharingSheet(r === 'no-location' ? 'no-location' : 'foreground');
+  }
+});
+
+function stopSharing() {
+  if (beaconSending()) stopSending();
+  closeLink();
+  setScreenAwake(true);
 }
+
+const SHARING_TEXT = {
+  starting: 'Setting up… Keep DashMate open for a moment.',
+  background: 'You can <b>lock this phone and put it away</b>, or use other apps. It keeps sending its location straight to the screen over your hotspot, encrypted.',
+  foreground: 'Keep DashMate open on this phone. Background sending isn’t available here, so the phone stops sending if you leave DashMate.',
+  'no-location': 'DashMate needs location permission on this phone to share it. Allow it in the phone’s settings, then pair again.',
+};
+
+let sharingMode = null;
+function openSharingSheet(mode) {
+  const android = /Android/i.test(navigator.userAgent);
+  openSheet(`${head('Sharing GPS with your screen')}
+    <p>${SHARING_TEXT[mode]}</p>
+    ${mode === 'background' ? `<p class="muted small">${android
+    ? 'Android shows a “DashMate is sharing GPS” notification while this runs; it has a Stop button too.'
+    : 'iPhone shows the location arrow in the status bar while this runs. If it asks to find devices on your local network, tap Allow.'}</p>` : ''}
+    <div class="row-btns"><button class="btn danger" data-stop-share>Stop sharing</button><button class="btn" data-close>OK</button></div>`, (card) => {
+    $('[data-stop-share]', card).onclick = () => { stopSharing(); closeSheet(); toast('Stopped sharing GPS'); };
+    return () => { sharingMode = null; };
+  });
+  sharingMode = mode;
+}
+
+// Back in DashMate: notice if sharing was stopped from the notification, and on the
+// screen, warn once if the phone has gone quiet.
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState !== 'visible' || !beaconSending()) return;
+  if (!(await refreshSending())) {
+    closeLink();
+    setScreenAwake(true);
+    toast('Stopped sharing GPS');
+  }
+});
+let quietWarned = false;
+setInterval(() => {
+  if (!beaconListening() || !lastBeaconFix()) return;
+  if (hearingPhone(15000)) quietWarned = false;
+  else if (!quietWarned) {
+    quietWarned = true;
+    toast('Not hearing from the phone. Check its hotspot is on, or pair again.');
+  }
+}, 5000);
 
 // Tapping the GPS chip explains weak location (Wi-Fi-only iPads have no GPS chip).
 $('#gps-chip').addEventListener('click', () => {

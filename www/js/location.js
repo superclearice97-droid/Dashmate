@@ -6,7 +6,6 @@ import { emit, on } from './bus.js';
 import { cumulative, pointAt, distance } from './core/geo.js';
 import { boxFor } from './core/scene.js';
 import { countKinds } from './core/vision-math.js';
-import { fromBackground } from './core/gps.js';
 
 const REMOTE_FRESH_MS = 5000;
 let watchId = null;
@@ -46,57 +45,6 @@ on('remote-fix', (f) => {
 });
 
 export const remoteActive = () => Date.now() - lastRemote < REMOTE_FRESH_MS;
-
-// ---------------------------------------------------------------- background GPS (phone)
-// While a phone is paired as the GPS for a screen, it keeps sending its position with
-// its own screen off. Android shows a notification while this runs (required by Android).
-let bgWatcher = null;
-
-export async function startBackgroundGps() {
-  const isNative = window.Capacitor?.isNativePlatform?.();
-  if (!isNative || bgWatcher) return false;
-  let plugin;
-  try {
-    plugin = window.Capacitor.registerPlugin('BackgroundGeolocation');
-    bgWatcher = await plugin.addWatcher({
-      backgroundTitle: 'DashMate is sharing GPS',
-      backgroundMessage: 'Sending this phone’s location to your DashMate screen. Open DashMate to stop.',
-      requestPermissions: true,
-      stale: false,
-      distanceFilter: 0,
-    }, (loc, err) => {
-      if (err) {
-        emit('gps-status', { ok: false, message: err.code === 'NOT_AUTHORIZED' ? 'Location permission is off' : 'Waiting for GPS…' });
-        return;
-      }
-      const f = fromBackground(loc);
-      if (!f || demoTimer) return;
-      source = 'device';
-      emit('fix', { ...f, source });
-    });
-  } catch (e) {
-    console.warn('[gps] background', e);
-    bgWatcher = null;
-    return false;
-  }
-  // The browser watch would deliver the same positions twice.
-  if (watchId != null) {
-    navigator.geolocation.clearWatch(watchId);
-    watchId = null;
-  }
-  bgPlugin = plugin;
-  return true;
-}
-let bgPlugin = null;
-
-export async function stopBackgroundGps() {
-  if (!bgWatcher) return;
-  try { await bgPlugin.removeWatcher({ id: bgWatcher }); } catch { /* already gone */ }
-  bgWatcher = null;
-  startDeviceGps();
-}
-
-export const backgroundGpsOn = () => bgWatcher != null;
 
 // ---------------------------------------------------------------- demo drive
 // A loop through downtown Chicago with turns, a red light and one stretch over the limit.

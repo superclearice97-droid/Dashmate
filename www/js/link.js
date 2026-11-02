@@ -8,6 +8,8 @@
 import { emit, on } from './bus.js';
 import { encodeDescription, decodeDescription } from './core/pairing-code.js';
 import { KINDS } from './core/vision-math.js';
+import { fixFromMessage, beaconOffer } from './core/gps.js';
+import { beaconSending } from './beacon.js';
 
 let pc = null;
 let channel = null;
@@ -26,34 +28,38 @@ function gathered(conn, ms = 3000) {
 
 function newConnection() {
   closeLink();
-  pc = new RTCPeerConnection({ iceServers: [] });
-  pc.addEventListener('connectionstatechange', () => {
-    const s = pc?.connectionState;
+  const conn = new RTCPeerConnection({ iceServers: [] });
+  pc = conn;
+  conn.addEventListener('connectionstatechange', () => {
+    if (conn !== pc) return; // closed on purpose
+    const s = conn.connectionState;
     if (s === 'failed' || s === 'disconnected' || s === 'closed') emit('link', { state: 'lost', role });
   });
-  return pc;
+  return conn;
 }
 
 function wire(dc) {
   channel = dc;
   dc.onopen = () => emit('link', { state: 'connected', role });
-  dc.onclose = () => emit('link', { state: 'lost', role });
+  dc.onclose = () => dc === channel && emit('link', { state: 'lost', role });
   dc.onmessage = (e) => receive(e.data);
 }
 
 const num = (v, lo, hi) => typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi;
 
 function receive(text) {
-  if (role !== 'screen' || typeof text !== 'string' || text.length > 4000) return;
+  if (!role || typeof text !== 'string' || text.length > 4000) return;
   let m;
   try { m = JSON.parse(text); } catch { return; }
-  if (m.t === 'fix' && num(m.lat, -90, 90) && num(m.lon, -180, 180)) {
-    emit('remote-fix', {
-      lat: m.lat, lon: m.lon,
-      accuracy: num(m.acc, 0, 1e5) ? m.acc : 50,
-      speed: num(m.spd, 0, 120) ? m.spd : null,
-      heading: num(m.hdg, 0, 360) ? m.hdg : null,
-    });
+  if (role === 'phone') {
+    // The screen's invitation to keep sending in the background.
+    const offer = beaconOffer(m);
+    if (offer) emit('beacon-offer', offer);
+    return;
+  }
+  if (m.t === 'fix') {
+    const f = fixFromMessage(m);
+    if (f) emit('remote-fix', f);
   } else if (m.t === 'vision') {
     const c = m.counts || {};
     emit('remote-vision', {
@@ -70,6 +76,9 @@ function receive(text) {
 function send(obj) {
   if (channel?.readyState === 'open') channel.send(JSON.stringify(obj));
 }
+
+// Screen: hand the phone the key, port and addresses for background sending.
+export const sendBeaconOffer = (offer) => role === 'screen' && send(offer);
 
 // ---- Screen side (iPad): show a code, then read the phone's reply code.
 export async function startAsScreen() {
@@ -100,18 +109,20 @@ export async function startAsPhone(code) {
   return encodeDescription(conn.localDescription);
 }
 
+// Closing on purpose (Disconnect, Stop sharing) isn't reported as a lost link.
 export function closeLink() {
-  try { channel?.close(); } catch { /* already closed */ }
-  try { pc?.close(); } catch { /* already closed */ }
+  const [c, p] = [channel, pc];
   channel = null;
   pc = null;
+  try { c?.close(); } catch { /* already closed */ }
+  try { p?.close(); } catch { /* already closed */ }
 }
 
 export const linkRole = () => (channel?.readyState === 'open' ? role : null);
 
 // The phone forwards its own GPS and road reading to the screen.
 on('fix', (f) => {
-  if (role !== 'phone' || f.source !== 'device') return;
+  if (role !== 'phone' || f.source !== 'device' || beaconSending()) return; // the background link sends it
   const now = Date.now();
   if (now - lastFixSent < 400) return;
   lastFixSent = now;

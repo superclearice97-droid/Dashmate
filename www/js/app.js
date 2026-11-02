@@ -7,11 +7,12 @@ import { TripTracker } from './core/trip.js';
 import { NavRoute } from './core/route.js';
 import { SpeedWatcher, GreenLightWatcher, warningEffects } from './core/alerts.js';
 import { TripLog } from './core/trips.js';
+import { gpsQuality } from './core/gps.js';
 import { initControls, openControls, closeControls, refreshControls, seg, bindFields, onlineFields } from './controls.js';
 import { isDaytime } from './core/sun.js';
 import { toScene, guessGear } from './core/scene.js';
 import { summarize } from './core/vision-math.js';
-import { startDeviceGps, startDemo, stopDemo, demoRunning, demoRoute, DEMO_LINE } from './location.js';
+import { startDeviceGps, startDemo, stopDemo, demoRunning, demoRoute, DEMO_LINE, startBackgroundGps, stopBackgroundGps, backgroundGpsOn } from './location.js';
 import * as mapView from './map.js';
 import { searchPlaces, fetchRoute, fetchRoad, fetchTemperature } from './services.js';
 import * as music from './music.js';
@@ -145,8 +146,9 @@ on('fix', (fix) => {
   renderGear();
   if (firstFix) applyTheme();
 
-  const label = { device: 'GPS · This device', phone: 'GPS · Phone', demo: 'Demo drive' }[fix.source] || 'GPS';
-  $('#gps-chip').innerHTML = `<i class="dot" style="background:${fix.accuracy > 50 ? '#f59e0b' : '#22c55e'}"></i>${label}`;
+  const q = gpsQuality(fix.source, fix.accuracy);
+  $('#gps-chip').innerHTML = `<i class="dot" style="background:${{ good: '#22c55e', weak: '#f59e0b', poor: '#ef4444' }[q.level]}"></i>${q.label}`;
+  $('#gps-chip').dataset.level = q.level;
 
   updateTrips();
   if (Date.now() - lastControlsRefresh > 2000) {
@@ -696,14 +698,46 @@ function pairAsPhone(code = null) {
   })();
 }
 
-on('link', (s) => {
+on('link', async (s) => {
   if (s.state === 'connected') {
     closeSheet();
-    toast(s.role === 'phone' ? 'Paired · sending GPS to the screen' : 'Paired · using the phone’s GPS');
-    if (s.role === 'phone') startDeviceGps();
+    if (s.role !== 'phone') return toast('Paired · using the phone’s GPS');
+    // The phone keeps sending with its screen off, so it can go in a pocket.
+    const background = await startBackgroundGps();
+    if (!background) startDeviceGps();
+    else setScreenAwake(false);
+    openSharingSheet(background);
   } else if (s.state === 'lost') {
+    if (backgroundGpsOn()) {
+      await stopBackgroundGps();
+      setScreenAwake(true);
+    }
     toast('Pairing lost. Pair again to reconnect.');
   }
+});
+
+function openSharingSheet(background) {
+  openSheet(`${head('Sharing GPS with your screen')}
+    <p>${background
+    ? 'You can <b>lock this phone and put it away</b>. It keeps sending its location to the screen in the background, and the screen can turn off to save battery.'
+    : 'Keep DashMate open on this phone. Background sending isn’t available here, so the phone stops sending if you leave DashMate.'}</p>
+    ${background && /Android/i.test(navigator.userAgent) ? '<p class="muted small">Android shows a “DashMate is sharing GPS” notification while this runs.</p>' : ''}
+    <div class="row-btns"><button class="btn danger" data-stop-share>Stop sharing</button><button class="btn" data-close>OK</button></div>`, (card) => {
+    $('[data-stop-share]', card).onclick = () => { closeLink(); closeSheet(); };
+  });
+}
+
+// Tapping the GPS chip explains weak location (Wi-Fi-only iPads have no GPS chip).
+$('#gps-chip').addEventListener('click', () => {
+  const level = $('#gps-chip').dataset.level;
+  if (level !== 'poor' && level !== 'weak') return;
+  openSheet(`${head('Weak location')}
+    <p>This device is only getting a rough position (often hundreds of metres out), so the car arrow and speed can't follow the road. Wi-Fi-only iPads have no GPS chip; they guess from nearby Wi-Fi, and a phone hotspot moves with you, so the guess barely changes.</p>
+    <h3>Ways to fix it</h3>
+    <ul class="legal"><li><b>A Bluetooth GPS receiver</b> (for example Garmin GLO or Bad Elf). iPadOS uses it automatically; DashMate then works on its own.</li>
+    <li><b>An iPad with cellular</b> has real GPS, even without a data plan.</li>
+    <li><b>Pair your phone</b> as the GPS (pair button). It can stay locked in your pocket.</li></ul>
+    <div class="row-btns"><button class="btn primary" data-act="pair">Pair phone</button><button class="btn" data-close>OK</button></div>`);
 });
 
 // Play/pause/skip go to whatever the media card is showing.
@@ -716,7 +750,7 @@ function mediaControl(action) {
 }
 
 // ---------------------------------------------------------------- controls (settings)
-const VERSION = '0.7.0';
+const VERSION = '0.8.0';
 const TRIPS_KEY = 'dashmate.trips.v1';
 let tripLog;
 try { tripLog = new TripLog(JSON.parse(localStorage.getItem(TRIPS_KEY) || 'null')); } catch { tripLog = new TripLog(); }
@@ -881,19 +915,29 @@ document.addEventListener('click', (e) => {
 });
 
 // ---------------------------------------------------------------- keep the screen on
-async function keepAwake() {
+// The dashboard keeps its screen on; a phone that's only feeding GPS to a screen lets it sleep.
+let wantAwake = false;
+let wakeLock = null;
+let keepAwakePlugin = null;
+async function setScreenAwake(on) {
+  wantAwake = on;
   try {
     if (isNative()) {
-      const plugin = window.Capacitor.registerPlugin?.('KeepAwake') ?? window.Capacitor.Plugins?.KeepAwake;
-      if (plugin) return await plugin.keepAwake();
+      keepAwakePlugin ??= window.Capacitor.registerPlugin?.('KeepAwake') ?? window.Capacitor.Plugins?.KeepAwake;
+      if (keepAwakePlugin) return await (on ? keepAwakePlugin.keepAwake() : keepAwakePlugin.allowSleep());
     }
     if ('wakeLock' in navigator) {
-      const lock = () => navigator.wakeLock.request('screen').catch(() => {});
-      await lock();
-      document.addEventListener('visibilitychange', () => document.visibilityState === 'visible' && lock());
+      if (on) wakeLock = await navigator.wakeLock.request('screen').catch(() => null);
+      else {
+        await wakeLock?.release();
+        wakeLock = null;
+      }
     }
   } catch { /* not supported: the device's own auto-lock applies */ }
 }
+document.addEventListener('visibilitychange', () => {
+  if (wantAwake && document.visibilityState === 'visible' && !isNative()) setScreenAwake(true);
+});
 
 // ---------------------------------------------------------------- first run
 function onboarding(done) {
@@ -981,7 +1025,7 @@ async function boot() {
     initSystemMusic();
     initSpotify();
     startDeviceGps();
-    keepAwake();
+    setScreenAwake(true);
     ready = true;
     if (pendingPairCode) {
       pairAsPhone(pendingPairCode);

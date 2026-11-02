@@ -28,9 +28,23 @@ if (platform === 'android') {
     + `$1<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />`
     + `$1<uses-permission android:name="android.permission.CAMERA" />`
     + `$1<uses-feature android:name="android.hardware.camera" android:required="false" />`
-    + `$1<uses-feature android:name="android.hardware.location.gps" android:required="false" />`
+    + `$1<uses-feature android:name="android.hardware.location.gps" android:required="false" tools:replace="android:required" />`
     + `$1<application`,
   ));
+  edit(join(main, 'AndroidManifest.xml'), (s) => s.replace(
+    '<manifest xmlns:android="http://schemas.android.com/apk/res/android">',
+    '<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">',
+  ));
+  // Background GPS (phone paired with a screen): notification text and a proper
+  // single-colour icon, as Android requires for the "sharing GPS" notification.
+  writeFileSync(join(main, 'res/drawable/ic_stat_dashmate.xml'), `<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
+    <path android:fillColor="#FFFFFFFF" android:pathData="M12,4A9,9 0,0 0,4.2 17.5l1.7,-1A7,7 0,1 1,19 12a7,7 0,0 1,-0.9 3.5l1.7,1A9,9 0,0 0,12 4zM15.7,7.9l-4.6,4.3a1.5,1.5 0,1 0,1.8 1.8z"/>
+</vector>
+`);
+  edit(join(main, 'res/values/strings.xml'), (s) => s.replace('</resources>', `    <string name="capacitor_background_geolocation_notification_channel_name">Sharing GPS with your screen</string>
+    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_stat_dashmate</string>
+</resources>`));
   // dashmate://pair?c=… links (the pairing QR code) open DashMate.
   edit(join(main, 'AndroidManifest.xml'), (s) => s.replace(
     /(<\/intent-filter>)/,
@@ -64,6 +78,12 @@ if (platform === 'android') {
     /<\/dict>\s*<\/plist>\s*$/,
     `\t<key>NSLocationWhenInUseUsageDescription</key>
 \t<string>DashMate uses your location to show your speed, your position on the map and turn-by-turn directions. It stays on your device.</string>
+\t<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+\t<string>When this phone is paired as the GPS for your DashMate screen, it keeps sending its location to that screen while locked, so it can stay in your pocket. It goes only to your screen.</string>
+\t<key>UIBackgroundModes</key>
+\t<array>
+\t\t<string>location</string>
+\t</array>
 \t<key>NSAppleMusicUsageDescription</key>
 \t<string>DashMate shows and controls what's playing in Apple Music, and lists your playlists. Nothing is uploaded.</string>
 \t<key>CFBundleURLTypes</key>

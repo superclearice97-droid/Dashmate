@@ -26,7 +26,13 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
       - run: npm test
+        env:
+          DASHMATE_REQUIRE_JAVA: '1'
 
   android:
     needs: test

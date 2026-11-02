@@ -1,4 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Phone pairing: the paired phone keeps sending GPS to the screen with its own
+         screen off, as a location foreground service with a visible notification. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <!-- Lets DashMate see the names of these music apps for the media card. -->
     <queries>
         <package android:name="com.spotify.music" />
@@ -24,5 +31,9 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+        <service
+            android:name="io.github.superclearice97.dashmate.media.BeaconService"
+            android:exported="false"
+            android:foregroundServiceType="location" />
     </application>
 </manifest>

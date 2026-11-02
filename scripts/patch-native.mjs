@@ -35,16 +35,6 @@ if (platform === 'android') {
     '<manifest xmlns:android="http://schemas.android.com/apk/res/android">',
     '<manifest xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools">',
   ));
-  // Background GPS (phone paired with a screen): notification text and a proper
-  // single-colour icon, as Android requires for the "sharing GPS" notification.
-  writeFileSync(join(main, 'res/drawable/ic_stat_dashmate.xml'), `<vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp" android:height="24dp" android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#FFFFFFFF" android:pathData="M12,4A9,9 0,0 0,4.2 17.5l1.7,-1A7,7 0,1 1,19 12a7,7 0,0 1,-0.9 3.5l1.7,1A9,9 0,0 0,12 4zM15.7,7.9l-4.6,4.3a1.5,1.5 0,1 0,1.8 1.8z"/>
-</vector>
-`);
-  edit(join(main, 'res/values/strings.xml'), (s) => s.replace('</resources>', `    <string name="capacitor_background_geolocation_notification_channel_name">Sharing GPS with your screen</string>
-    <string name="capacitor_background_geolocation_notification_icon">drawable/ic_stat_dashmate</string>
-</resources>`));
   // dashmate://pair?c=… links (the pairing QR code) open DashMate.
   edit(join(main, 'AndroidManifest.xml'), (s) => s.replace(
     /(<\/intent-filter>)/,
@@ -97,6 +87,8 @@ if (platform === 'android') {
 \t\t\t</array>
 \t\t</dict>
 \t</array>
+\t<key>NSLocalNetworkUsageDescription</key>
+\t<string>When you pair a phone as the GPS for your DashMate screen, the phone sends its position straight to the screen over your hotspot, encrypted. Nothing goes to the internet.</string>
 \t<key>NSCameraUsageDescription</key>
 \t<string>DashMate uses the camera to read pairing codes and, if you turn it on, to spot traffic lights, cars and people. Images are processed on this device and never uploaded.</string>
 </dict>

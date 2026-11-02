@@ -881,7 +881,7 @@ function mediaControl(action) {
 }
 
 // ---------------------------------------------------------------- controls (settings)
-const VERSION = '0.9.0';
+const VERSION = '0.10.0';
 const TRIPS_KEY = 'dashmate.trips.v1';
 let tripLog;
 try { tripLog = new TripLog(JSON.parse(localStorage.getItem(TRIPS_KEY) || 'null')); } catch { tripLog = new TripLog(); }

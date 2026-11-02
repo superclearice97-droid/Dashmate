@@ -1,5 +1,5 @@
 # Terms & safety
-_Version 1 · 31 October 2026_
+_Version 2 · 3 November 2026_
 
 ## Drive safely
 
@@ -13,6 +13,8 @@ _Version 1 · 31 October 2026_
 - Directions can be wrong or unsafe (closed roads, turn restrictions, construction). Use your own judgement.
 - GPS speed can differ from your car's speedometer.
 - **Road reading is experimental and is not a safety system.** It can miss or misread traffic lights, people and vehicles, and can alert at the wrong time. Never rely on it to decide when to go or stop.
+- **Speed camera and road hazard warnings** come from OpenStreetMap and can be missing, misplaced or out of date; mobile and new cameras are not included. They are information, not permission: **always drive at or below the posted limit.** DashMate offers camera warnings only where it knows they are legal and switches them off in countries that forbid or restrict them (for example Germany, France, Switzerland and Austria); if you cross a border it can take a moment to notice. Laws change, so it is up to you to follow the rules where you drive.
+- **Following-distance, "Too close" and "Traffic is moving" alerts are part of road reading**: rough guesses from one camera, not a safety system. Keep a safe distance yourself.
 
 ## No warranty
 

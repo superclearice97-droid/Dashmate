@@ -2,13 +2,14 @@
 
 export const PRIVACY = `
 <h2>Privacy</h2>
-<p class="muted small">Effective 2 November 2026</p>
+<p class="muted small">Effective 3 November 2026</p>
 <p>DashMate has no accounts, no ads, no analytics and no tracking. The developer never receives any of your data.</p>
 <h4>Stays on your device</h4>
 <ul>
   <li>Your location, speed and trip numbers.</li>
   <li>Camera images for road reading. They are analysed on the device and never saved or sent anywhere.</li>
   <li>Songs you add, and your settings.</li>
+  <li>Home, Work and your last five destinations, if you save or navigate to them. Clear them in Controls › Navigation.</li>
 </ul>
 <h4>Phone ⇄ screen pairing</h4>
 <p>A direct, encrypted connection between your own two devices. No server is involved; the QR codes you scan contain everything needed.</p>
@@ -16,7 +17,7 @@ export const PRIVACY = `
 <ul>
   <li><b>Map</b>: map pieces come from OpenFreeMap (tiles.openfreemap.org), which sees which area you are looking at.</li>
   <li><b>Directions &amp; search</b>: your search text and approximate area (about 1 km) go to Photon by komoot (photon.komoot.io); your start and destination go to the OSRM route server run by FOSSGIS (routing.openstreetmap.de).</li>
-  <li><b>Speed limits &amp; street names</b>: your current position is sent every few hundred metres to the Overpass API (overpass-api.de).</li>
+  <li><b>Speed limits, street names, speed cameras &amp; road hazards</b>: your current position is sent to the Overpass API (overpass-api.de) every few hundred metres (for the road you're on) and about every 500 m (for cameras, speed bumps, railway crossings and hazard signs within about 1.5 km). With speed camera warnings on, your position is also used now and then (about every 25 km) to look up which country you are in, so camera warnings are only offered where they are legal. The country is kept in memory only.</li>
   <li><b>Spotify</b> (off until you tap Connect Spotify): you sign in on Spotify's own page; DashMate never sees your password. While DashMate is open and connected, it asks Spotify what's playing every few seconds and sends your play/pause/skip and playlist taps. Your Spotify access keys are kept only on this device; Disconnect Spotify deletes them. Spotify's privacy policy applies to what Spotify receives.</li>
   <li><b>Weather</b> (off by default): your position rounded to about 10 km goes to Open-Meteo (api.open-meteo.com).</li>
 </ul>
@@ -35,7 +36,7 @@ export const PRIVACY = `
 
 export const TERMS = `
 <h2>Terms &amp; safety</h2>
-<p class="muted small">Version 1 · 31 October 2026</p>
+<p class="muted small">Version 2 · 3 November 2026</p>
 <h4>Drive safely</h4>
 <ul>
   <li>Set up routes, music and pairing <b>only while parked</b>. Don't look at or touch the screen in ways that take your attention off the road.</li>
@@ -48,6 +49,8 @@ export const TERMS = `
   <li>Directions can be wrong or unsafe (closed roads, turn restrictions, construction). Use your own judgement.</li>
   <li>GPS speed can differ from your car's speedometer.</li>
   <li><b>Road reading is experimental and is not a safety system.</b> It can miss or misread traffic lights, people and vehicles, and can alert at the wrong time. Never rely on it to decide when to go or stop.</li>
+  <li><b>Speed camera and road hazard warnings</b> come from OpenStreetMap and can be missing, misplaced or out of date; mobile and new cameras are not included. They are information, not permission: <b>always drive at or below the posted limit.</b> DashMate offers camera warnings only where it knows they are legal and switches them off in countries that forbid or restrict them (for example Germany, France, Switzerland and Austria); if you cross a border it can take a moment to notice. Laws change, so it is up to you to follow the rules where you drive.</li>
+  <li><b>Following-distance, “Too close” and “Traffic is moving” alerts are part of road reading</b>: rough guesses from one camera, not a safety system. Keep a safe distance yourself.</li>
 </ul>
 <h4>No warranty</h4>
 <p>DashMate is free, open-source software provided "as is", without warranty of any kind, under the MIT License. To the fullest extent the law allows, the authors are not liable for any damages, fines, accidents or losses arising from its use. You use it at your own risk.</p>
@@ -79,7 +82,7 @@ export const LICENSES = `
   <li>Map tiles: OpenFreeMap, © OpenMapTiles</li>
   <li>Routing: OSRM, served by FOSSGIS e.V.</li>
   <li>Search: Photon by komoot</li>
-  <li>Speed limits: Overpass API</li>
+  <li>Speed limits, speed cameras and road hazards: Overpass API</li>
   <li>Weather: Open-Meteo, CC BY 4.0</li>
 </ul>
 <p class="muted small">Full license texts are in THIRD_PARTY_NOTICES.md in the source code.</p>

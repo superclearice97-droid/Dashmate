@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.10.0 — 2026-11-03
+
+- **Speed camera warnings** (experimental): fixed, red-light and average-speed cameras from OpenStreetMap, about 20 seconds ahead (300 m in town, up to 1 km on motorways), only on your road or route and in your direction where the map records it. A card counts down the distance, shows the limit and turns red when you're faster; in an average-speed zone it shows your average speed and the distance to the end. Alert: Voice, Tone or Banner only (Controls › Navigation), with a Listen button. Red-light cameras can be switched off separately.
+- **Only where it's legal:** camera warnings are not offered in Germany, France, Switzerland, Austria, Belgium, Luxembourg, Liechtenstein, Cyprus, North Macedonia, Turkey or Kuwait, and stay off until DashMate knows the country (looked up from your position with the speed-limit service about every 25 km).
+- **Road hazard warnings** (experimental): speed bumps (bumps, humps, cushions, raised crossings), railway crossings and hazard signs (animals, dangerous bends and junctions, school zones, falling rocks…) from OpenStreetMap, as a yellow card with a soft ding; each kind can be switched off; Voice, Tone or Banner only.
+- **Following distance** (road reading, experimental): a chip under the car view shows the distance and time gap to the car ahead in your lane; **Too close** when you're under 1 second behind above 30 km/h for 2 seconds; **Traffic is moving** chime when the car ahead pulls away while you're stopped. Both can be switched off (Speed & alerts).
+- **Phone Drive Mode 3D tab**: the car view with what road reading sees, under the map.
+- **Home, Work and recent destinations**: set Home/Work to your current location in Controls › Navigation; they and your last five destinations appear before you search. Kept only on the device, with Clear buttons.
+- The demo drive has made-up cameras and hazards, and the car ahead pulls away at the red light.
+- Terms (version 2) and privacy policy updated for camera and hazard warnings and saved places; you'll be asked to accept the terms once more.
+
 ## 0.9.0 — 2026-11-02
 
 - **The paired phone really keeps sending GPS with its screen off or another app open** (experimental). In 0.8.0 the phone kept reading its location but the app's web code was paused in the background, so nothing reached the iPad. Now native code on both devices does it:

@@ -1,5 +1,13 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.10.0
+- **Speed camera warnings** from OpenStreetMap (fixed, red-light, average-speed zones), about 20 seconds ahead, on your road or route. The card counts down, shows the limit and turns red if you're faster; in average-speed zones it shows your average. Voice, tone or banner (Controls › Navigation). **Not offered where the law forbids it** (Germany, France, Switzerland, Austria, Belgium, Luxembourg, Liechtenstein, Cyprus, North Macedonia, Turkey, Kuwait)
+- **Road hazard warnings**: speed bumps, railway crossings and hazard signs, each switchable
+- **Following distance** from road reading: distance and seconds to the car ahead, "Too close", and a chime when traffic ahead moves off
+- **3D tab** in phone Drive Mode
+- **Home, Work and recent destinations** when you tap Navigate
+- All **experimental**: checked with unit tests and the demo drive (which has made-up cameras and hazards), not yet on real roads. You'll be asked to accept the updated terms once.
+
 ### New in 0.9.0
 - **Fix:** the paired phone now really keeps sending GPS to the iPad **with its screen off or while you use other apps** (in 0.8.0 it stopped as soon as you left DashMate). Positions go straight to the iPad over the hotspot, encrypted (**experimental**, not yet tried on real phones). Install 0.9.0 on **both** devices and pair again. If the phone asks about your local network, tap Allow.
 - The iPad tells you if it stops hearing from the phone

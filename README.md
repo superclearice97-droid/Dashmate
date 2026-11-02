@@ -17,7 +17,7 @@ A car dashboard for the device you already have. Mount an iPad, iPhone or Androi
 - **Speed limit warning**: Off, Display or Chime, with an offset; **green traffic light chime** on/off.
 - **Avoid highways, tolls or ferries** when routing; **12/24-hour clock**.
 - **Drive Mode on phones**: works upright or sideways.
-- **Phone as the GPS** for a Wi-Fi-only iPad (experimental): DashMate goes on both devices; point the phone's normal camera at the iPad's code (it opens DashMate), then show the phone's code to the iPad.
+- **Phone as the GPS** for a Wi-Fi-only iPad (experimental): DashMate goes on both devices; point the phone's normal camera at the iPad's code (it opens DashMate), then show the phone's code to the iPad. The phone then **keeps sending with its screen off** in your pocket. (For a fully independent iPad, use a Bluetooth GPS receiver; DashMate warns when it only has Wi-Fi location.)
 - **Road reading** (experimental): the phone's camera identifies street objects on the device and labels them: **cars, trucks, buses, motorcycles, bicycles, trams/trains, people, dogs, cats, horses, traffic lights (with their colour) and stop signs**. It tells you when a red light turns green while you're stopped, and draws everything it sees around your car in the 3D view. Choose **Fast** (updates several times a second) or **Detailed** (a larger model that spots smaller, farther things but updates about once a second).
 - **Demo drive** (car button › Controls › Software › Demo drive) to see everything at home.
 
@@ -36,6 +36,7 @@ Step-by-step install instructions: [docs/INSTALL.md](docs/INSTALL.md).
 | iPad and phone layouts, light/dark, demo drive (with simulated traffic), turn list, Controls (tiles, categories, search, trips), music panel, pairing screens | Checked in a desktop browser at iPad and iPhone sizes |
 | Avoid highways/tolls/ferries | Built to OSRM's `exclude` option with a fallback to the normal route; not yet tried against the live route server |
 | Live map tiles, routing, search, speed limits from the internet | Built to each service's public API; not tried on a real drive yet |
+| **Background GPS on the paired phone** | **Experimental**: start/stop, screen sleep and forwarding tested in a browser with a simulated plugin; not yet tried on real phones, including how long Android keeps the link alive with the screen off |
 | **Phone ⇄ iPad pairing** | **Experimental**: the pairing link and reply flow are tested in a browser with simulated app links; the connection itself not yet confirmed on real devices |
 | **Connect Spotify** | **Experimental**: sign-in (PKCE), token exchange, playback control and playlists tested in a browser against simulated Spotify servers; the relay page tested for iPad, Android and bad input; not yet tried with a real Spotify account |
 | **Music app control** | **Experimental**: screen logic tested in a browser with a simulated native plugin; the Android and iOS native code is compiled by the build but not yet tried on real devices |

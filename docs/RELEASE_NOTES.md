@@ -1,5 +1,9 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.8.0
+- The paired phone **keeps sending GPS with its screen off**, so it can stay in your pocket (**experimental**, not yet tried on real phones). Android shows a notification while it shares.
+- The GPS chip warns **Wi-Fi location only** on Wi-Fi-only iPads; tap it for fixes (Bluetooth GPS receiver, cellular iPad, or pair your phone)
+
 ### New in 0.7.0
 - **Connect Spotify** (**experimental**, not yet tried with a real account): control Spotify on any of your devices and play your Spotify playlists from DashMate. Needs Spotify Premium and a one-time owner setup (docs/SPOTIFY-SETUP.md); until then the Music panel says it isn't set up. DashMate's own player keeps working alongside.
 

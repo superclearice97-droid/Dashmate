@@ -31,12 +31,16 @@ SideStore's own guide has pictures and troubleshooting, and it is the place to c
 
 ## Using a Wi-Fi-only iPad with your phone's GPS (experimental)
 
+A Wi-Fi-only iPad has no GPS chip; it only guesses its location from Wi-Fi (DashMate shows **Wi-Fi location only**). For the iPad to work fully on its own, use a **Bluetooth GPS receiver** (for example Garmin GLO or Bad Elf; iPadOS uses it automatically, no setup in DashMate) or an iPad with cellular. Otherwise, use your phone as the GPS:
+
+
 1. **Install DashMate on the phone too** (the APK on Android, the .ipa on iPhone, as above). Open it once and accept the terms.
 2. Turn on **Personal Hotspot** on the phone and connect the iPad to it. The iPad now has internet through the phone.
 3. On the iPad tap the **pair** button (blue) › **This is the screen**. A QR code appears.
 4. Point the **phone's normal Camera app** at the iPad's code and tap the banner. It opens DashMate on the phone. (Or in DashMate on the phone: **pair** › **This is the phone**, then scan.)
 5. The phone shows its own code. Hold it up to the iPad's front camera.
 6. Both say **Paired**. The iPad now shows the phone's speed and position.
+7. **Lock the phone and put it away.** It keeps sending its location in the background, and its screen can turn off. (Android shows a "DashMate is sharing GPS" notification while it does.) Tap **Stop sharing** in DashMate on the phone when you're done.
 
 If the phone says no app can open the code, DashMate isn't installed on the phone yet.
 

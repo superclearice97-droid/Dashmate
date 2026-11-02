@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0 — 2026-11-01
+
+- **Phone can stay locked while it feeds GPS to the iPad** (experimental): once paired, the phone switches to background location (`@capacitor-community/background-geolocation`), lets its own screen turn off, and shows "You can lock this phone" with a Stop sharing button. Android shows a "DashMate is sharing GPS" notification while it runs. Unpairing stops it and restores the phone's normal keep-awake.
+- DashMate no longer keeps a paired phone's screen on.
+- **Weak location warning:** the GPS chip says **Wi-Fi location only** when position accuracy is worse than 100 m (Wi-Fi-only iPads), and tapping it explains why the car arrow can't follow the road and what fixes it (Bluetooth GPS receiver, cellular iPad, or pairing the phone).
+- Privacy policy and notices updated for background location.
+
 ## 0.7.0 — 2026-11-01
 
 - **Connect Spotify** (optional, experimental): control Spotify on any of your devices from DashMate's media card (song, artist, cover art, which device, play/pause/skip) and start your Spotify playlists from the Music panel. Sign-in uses Spotify's own page with PKCE, so DashMate never handles your password and stores no secret; access keys stay on the device. Needs Spotify Premium and a one-time owner setup (docs/SPOTIFY-SETUP.md).

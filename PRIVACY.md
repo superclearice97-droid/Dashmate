@@ -27,6 +27,8 @@ Like any website, these services also see your device's IP address. Their own pr
 
 Location (speed, map, directions), camera (road reading and scanning pairing codes). You can refuse either; the rest of the app keeps working.
 
+**Background location (phone pairing only).** When a phone is paired as the GPS for your DashMate screen, it keeps reading its location while locked, so it can stay in your pocket. That location goes only to your paired screen over the direct encrypted link, never anywhere else. It stops when you tap Stop sharing, unpair, or close DashMate. On Android a notification shows while it runs.
+
 **Music control (optional).** On Android, controlling Spotify and other music apps needs **notification access**, because Android ties media controls to that permission. DashMate only uses it to see and control what's playing (song, artist, album art) and never reads your notifications. On iPad and iPhone, **Apple Music access** lets DashMate show and control what's playing and list your playlists. Nothing is sent anywhere; you can turn either off in the system settings.
 
 ## Children

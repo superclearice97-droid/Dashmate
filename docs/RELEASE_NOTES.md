@@ -1,7 +1,10 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.9.0
+- **Fix:** the paired phone now really keeps sending GPS to the iPad **with its screen off or while you use other apps** (in 0.8.0 it stopped as soon as you left DashMate). Positions go straight to the iPad over the hotspot, encrypted (**experimental**, not yet tried on real phones). Install 0.9.0 on **both** devices and pair again. If the phone asks about your local network, tap Allow.
+- The iPad tells you if it stops hearing from the phone
+
 ### New in 0.8.0
-- The paired phone **keeps sending GPS with its screen off**, so it can stay in your pocket (**experimental**, not yet tried on real phones). Android shows a notification while it shares.
 - The GPS chip warns **Wi-Fi location only** on Wi-Fi-only iPads; tap it for fixes (Bluetooth GPS receiver, cellular iPad, or pair your phone)
 
 ### New in 0.7.0

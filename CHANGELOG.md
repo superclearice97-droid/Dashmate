@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.9.0 — 2026-11-02
+
+- **The paired phone really keeps sending GPS with its screen off or another app open** (experimental). In 0.8.0 the phone kept reading its location but the app's web code was paused in the background, so nothing reached the iPad. Now native code on both devices does it:
+  - Phone: Android runs a location service with a "DashMate is sharing GPS" notification (with a Stop sharing button); iPhone uses background location (the location arrow shows). Either reads GPS about once a second and sends each position straight to the screen over the hotspot.
+  - Screen: listens for those positions and ignores anything else.
+  - Each position is encrypted and signed with AES-256-GCM using a fresh random key that the screen hands over through the encrypted pairing link; old positions can't be replayed, and positions only go to private local-network addresses.
+- The screen no longer says "Pairing lost" while positions keep arriving, and says **Not hearing from the phone** if they stop.
+- Stop sharing (in DashMate or the Android notification) and Disconnect no longer also show "Pairing lost".
+- Removed the `@capacitor-community/background-geolocation` plugin that 0.8.0 used.
+- iOS asks for local network access (needed to reach the other device). Privacy policy updated.
+
 ## 0.8.0 — 2026-11-01
 
 - **Phone can stay locked while it feeds GPS to the iPad** (experimental): once paired, the phone switches to background location (`@capacitor-community/background-geolocation`), lets its own screen turn off, and shows "You can lock this phone" with a Stop sharing button. Android shows a "DashMate is sharing GPS" notification while it runs. Unpairing stops it and restores the phone's normal keep-awake.

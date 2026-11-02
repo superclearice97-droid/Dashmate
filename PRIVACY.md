@@ -1,5 +1,5 @@
 # Privacy
-_Effective 31 October 2026_
+_Effective 2 November 2026_
 
 DashMate has no accounts, no ads, no analytics and no tracking. The developer never receives any of your data.
 
@@ -27,7 +27,7 @@ Like any website, these services also see your device's IP address. Their own pr
 
 Location (speed, map, directions), camera (road reading and scanning pairing codes). You can refuse either; the rest of the app keeps working.
 
-**Background location (phone pairing only).** When a phone is paired as the GPS for your DashMate screen, it keeps reading its location while locked, so it can stay in your pocket. That location goes only to your paired screen over the direct encrypted link, never anywhere else. It stops when you tap Stop sharing, unpair, or close DashMate. On Android a notification shows while it runs.
+**Background location (phone pairing only).** When a phone is paired as the GPS for your DashMate screen, it keeps reading its location about once a second while locked or while you use other apps, so it can stay in your pocket. Each position goes straight to your paired screen over your local network (the phone's hotspot), encrypted and signed with a random key made for that pairing (AES-256-GCM). DashMate only sends it to private local-network addresses, never to the internet or anyone else, and the screen ignores anything not signed with that key. It stops when you tap Stop sharing (in DashMate, or in the Android notification) or Disconnect. On Android a notification shows the whole time; on iPhone the location arrow shows in the status bar. iPhone and iPad may ask to allow DashMate to find devices on your local network; that is used only for this link.
 
 **Music control (optional).** On Android, controlling Spotify and other music apps needs **notification access**, because Android ties media controls to that permission. DashMate only uses it to see and control what's playing (song, artist, album art) and never reads your notifications. On iPad and iPhone, **Apple Music access** lets DashMate show and control what's playing and list your playlists. Nothing is sent anywhere; you can turn either off in the system settings.
 

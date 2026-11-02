@@ -40,13 +40,18 @@ A Wi-Fi-only iPad has no GPS chip; it only guesses its location from Wi-Fi (Dash
 4. Point the **phone's normal Camera app** at the iPad's code and tap the banner. It opens DashMate on the phone. (Or in DashMate on the phone: **pair** › **This is the phone**, then scan.)
 5. The phone shows its own code. Hold it up to the iPad's front camera.
 6. Both say **Paired**. The iPad now shows the phone's speed and position.
-7. **Lock the phone and put it away.** It keeps sending its location in the background, and its screen can turn off. (Android shows a "DashMate is sharing GPS" notification while it does.) Tap **Stop sharing** in DashMate on the phone when you're done.
+7. The phone says **You can lock this phone and put it away**. Lock it, or switch to another app: it keeps sending its location to the iPad about once a second. If the phone asks to allow DashMate to find devices on your **local network**, tap **Allow** (it needs that to reach the iPad).
+   - **Android** shows a "DashMate is sharing GPS" notification the whole time, with a **Stop sharing** button.
+   - **iPhone** shows the location arrow in the status bar. Don't swipe DashMate away in the app switcher; that stops it.
+8. When you're done, tap **Stop sharing** (in DashMate on the phone, or in the Android notification).
 
 If the phone says no app can open the code, DashMate isn't installed on the phone yet.
 
-To also use road reading, mount the phone so its back camera sees the road and turn on **Road reading** on the phone. The iPad shows the results.
+To also use road reading, mount the phone so its back camera sees the road, keep DashMate open on it and turn on **Road reading** on the phone. The iPad shows the results.
 
-If the connection drops (for example, the hotspot turns off), pair again. Pairing needs iOS 16.4 or newer.
+Keep DashMate open on the iPad; it is the screen. If the iPad says **Not hearing from the phone**, check the hotspot is still on; if that doesn't help (or after restarting DashMate on either device), pair again. Pairing needs iOS 16.4 or newer.
+
+Road reading results still go over the pairing link, so they only reach the iPad while DashMate is open on the phone.
 
 ## Controlling Spotify, Apple Music and other music apps (experimental)
 

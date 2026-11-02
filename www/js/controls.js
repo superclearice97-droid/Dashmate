@@ -26,7 +26,7 @@ export function onlineFields() {
   const o = settings.online;
   return row('Map', 'Map pieces from OpenFreeMap', sw('online.map', o.map), 'privacy internet online')
     + row('Directions &amp; search', 'Search text and route to Photon and OSRM (FOSSGIS)', sw('online.nav', o.nav), 'privacy internet online navigation')
-    + row('Speed limits &amp; street names', 'Your position to the Overpass API', sw('online.limits', o.limits), 'privacy internet online')
+    + row('Speed limits &amp; street names', 'Your position to the Overpass API. Also used for speed cameras and road hazards', sw('online.limits', o.limits), 'privacy internet online')
     + row('Outside temperature', 'Your area (~10 km) to Open-Meteo', sw('online.weather', o.weather), 'privacy internet online weather');
 }
 
@@ -95,6 +95,41 @@ function spotifyRow() {
     : row('Spotify', 'Control Spotify on any of your devices (Premium). Signs in on Spotify’s page', '<button class="btn primary" data-ctl="spotify-connect">Connect</button>', 'music account premium privacy online');
 }
 
+function placeRow(kind, label) {
+  const p = settings[kind];
+  return row(label, p ? 'Saved on this device' : 'Not set',
+    `<span class="row-btns tight"><button class="btn" data-ctl="set-place" data-place="${kind}">Use current location</button>${p ? `<button class="btn" data-ctl="clear-place" data-place="${kind}">Clear</button>` : ''}</span>`, 'address saved place favourite');
+}
+
+const ALERT_OPTIONS = [['voice', 'Voice'], ['tone', 'Tone'], ['banner', 'Banner only']];
+
+function cameraSection() {
+  const banned = ctx.roadside.bannedIn();
+  if (banned) {
+    return `<h3 class="ctl-sub">Speed cameras</h3><p class="muted small" data-keys="speed camera">Speed camera warnings aren’t available in ${banned}, where the law doesn’t allow them.</p>`;
+  }
+  const needs = settings.online.limits ? '' : ' Turn on Speed limits &amp; street names (Privacy) to use them.';
+  const n = ctx.roadside.count();
+  const where = ctx.roadside.allowed() ? `${n} camera${n === 1 ? '' : 's'} nearby` : 'Starts once DashMate knows which country you’re in';
+  return `<h3 class="ctl-sub">Speed cameras</h3>`
+    + row('Speed camera alerts', where, sw('cameras', settings.cameras), 'speed camera radar enforcement')
+    + row('Red-light cameras', 'Cameras at traffic lights, too', sw('redlight', settings.redlight), 'red light camera')
+    + row('Alert', 'A tone, then “Speed camera in 400 metres, limit 50”. Just the tone while voice guidance is off',
+      `<span class="row-btns tight">${seg('cameraAlert', settings.cameraAlert, ALERT_OPTIONS)}<button class="btn" data-ctl="listen" data-listen="camera">Listen</button></span>`, 'speed camera sound voice')
+    + `<p class="muted small">Fixed, red-light and average-speed cameras from OpenStreetMap, announced about 20 seconds before you reach them (300 m in town, up to 1 km on motorways), on your road or route and in your direction of travel. Coverage depends on the map; mobile cameras are not included. Always follow the posted limits.${needs}</p>`;
+}
+
+function hazardSection() {
+  const h = settings.hazards;
+  return `<h3 class="ctl-sub">Road hazards</h3>`
+    + row('Speed bumps', 'Bumps, humps, cushions and raised crossings', sw('hazards.bump', h.bump), 'hazard bump hump')
+    + row('Railway crossings', 'Level crossings with trains and trams', sw('hazards.rail', h.rail), 'hazard train railroad level crossing')
+    + row('Hazard signs', 'Animals, dangerous bends and junctions, school zones, falling rocks', sw('hazards.hazard', h.hazard), 'hazard warning sign animals school')
+    + row('Alert', 'A soft ding, then “Speed bump in 100 metres”. Just the ding while voice guidance is off',
+      `<span class="row-btns tight">${seg('hazardAlert', settings.hazardAlert, ALERT_OPTIONS)}<button class="btn" data-ctl="listen" data-listen="hazard">Listen</button></span>`, 'hazard sound voice')
+    + `<p class="muted small">Speed bumps, railway crossings and hazard signs mapped in OpenStreetMap on the road ahead, a few seconds before you reach them. Uses the Speed limits &amp; street names connection. Potholes and temporary hazards are not on the map.</p>`;
+}
+
 const RENDER = {
   quick: () => {
     const s = settings;
@@ -115,18 +150,25 @@ const RENDER = {
     + row('Time format', '', seg('time24', settings.time24 ? '24' : '12', [['12', '12-hour'], ['24', '24-hour']]), 'clock')
     + row('Car color', 'In the car view', `<span class="swatches">${COLORS.map((c) => `<button data-ctl="color" data-color="${c}" style="background:${c}" class="${c === settings.carColor ? 'on' : ''}" aria-label="Car color ${c}"></button>`).join('')}</span>`, 'paint colour'),
   navigation: () => row('Voice guidance', 'Spoken turn-by-turn directions', sw('voice', settings.voice), 'speak directions')
+    + placeRow('home', 'Home') + placeRow('work', 'Work')
+    + row('Recent destinations', `${settings.recent.length} saved on this device`, `<button class="btn" data-ctl="clear-recent" ${settings.recent.length ? '' : 'disabled'}>Clear</button>`, 'history places privacy')
     + row('Avoid highways', '', sw('avoid.highways', settings.avoid.highways), 'motorway freeway route')
     + row('Avoid tolls', '', sw('avoid.tolls', settings.avoid.tolls), 'toll route')
     + row('Avoid ferries', '', sw('avoid.ferries', settings.avoid.ferries), 'ferry boat route')
-    + `<p class="muted small">If the route server can't avoid something on a trip, DashMate tells you and uses the normal route.</p>`,
-  alerts: () => row('Speed limit warning', 'Uses speed limits from OpenStreetMap; posted signs always win', seg('speedWarn', settings.speedWarn, [['off', 'Off'], ['display', 'Display'], ['chime', 'Chime']]), 'speeding slow down')
+    + `<p class="muted small">If the route server can't avoid something on a trip, DashMate tells you and uses the normal route.</p>`
+    + cameraSection() + hazardSection(),
+  alerts: () => row('Following distance warning', 'Needs road reading. “Too close” when you’re less than 1 second behind the car ahead above 30 km/h (18 mph)', sw('followWarn', settings.followWarn), 'tailgating gap distance car ahead')
+    + row('Traffic moving chime', 'Needs road reading. Chimes when the car ahead pulls away while you’re stopped', sw('queueChime', settings.queueChime), 'queue go car ahead')
+    + row('Speed limit warning', 'Uses speed limits from OpenStreetMap; posted signs always win', seg('speedWarn', settings.speedWarn, [['off', 'Off'], ['display', 'Display'], ['chime', 'Chime']]), 'speeding slow down')
     + row('Warning offset', `Warn when this many ${settings.units === 'imperial' ? 'mph' : 'km/h'} over the limit`, seg('overBy', settings.overBy, [[0, '0'], [5, '+5'], [10, '+10']]), 'speed limit tolerance')
     + row('Green traffic light chime', 'Needs road reading. Chimes when the light ahead turns green while you’re stopped', sw('greenChime', settings.greenChime), 'go signal')
     + row('Alert sounds', 'All DashMate chimes', sw('chimes', settings.chimes), 'mute sound'),
   road: () => row('Road reading <span class="tag">Experimental</span>', 'Identifies vehicles, bikes, people, animals, traffic lights and stop signs on this device. Not a safety system.',
     `<button class="btn ${ctx.vision.running() ? '' : 'primary'}" data-ctl="toggle-camera">${ctx.vision.running() ? 'Stop camera' : 'Start camera'}</button>`, 'camera detection objects autopilot')
     + row('Detail', 'Detailed spots smaller, farther things but updates about once a second', seg('detail', settings.detail, [['fast', 'Fast'], ['detailed', 'Detailed']]), 'model accuracy')
-    + row('Green traffic light chime', '', sw('greenChime', settings.greenChime), 'go signal'),
+    + row('Green traffic light chime', '', sw('greenChime', settings.greenChime), 'go signal')
+    + row('Following distance warning', 'Shows how far behind the car ahead you are, in metres and seconds', sw('followWarn', settings.followWarn), 'tailgating gap distance car ahead')
+    + row('Traffic moving chime', '', sw('queueChime', settings.queueChime), 'queue go car ahead'),
   trips: () => {
     const cur = ctx.trips.current();
     return `${tripCard('Current drive', cur, 'current')}${tripCard('Trip A', ctx.trips.log.get('A'), 'A')}${tripCard('Trip B', ctx.trips.log.get('B'), 'B')}
@@ -172,7 +214,7 @@ function render() {
       el.hidden = !hit;
       hits += hit;
     }
-    $$('p', sec).forEach((p) => { p.hidden = true; });
+    $$('p, .ctl-sub', sec).forEach((p) => { p.hidden = true; });
     sec.hidden = !hits;
     any ||= hits > 0;
   }
@@ -231,6 +273,12 @@ export function initControls(context) {
       case 'spotify-connect': return ctx.spotify.connect();
       case 'spotify-disconnect': ctx.spotify.disconnect(); return render();
       case 'color': return saveSettings({ carColor: el.dataset.color });
+      case 'set-place': return ctx.places.setHere(el.dataset.place);
+      case 'clear-place': return saveSettings({ [el.dataset.place]: null });
+      case 'clear-recent':
+        saveSettings({ recent: [] });
+        return ctx.toast('Recent destinations cleared');
+      case 'listen': return ctx.roadside.preview(el.dataset.listen);
       case 'legal': return ctx.openLegal(el.dataset.legal);
       case 'releases': return ctx.openUrl(RELEASES_URL);
       case 'forget-songs':

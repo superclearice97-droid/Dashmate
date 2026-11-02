@@ -3,6 +3,7 @@
 import { settings } from './settings.js';
 import { osrmUrl } from './core/route.js';
 import { overpassQuery, OVERPASS_URL, pickWay } from './core/speedlimit.js';
+import { roadsideQuery, countryQuery, countryFrom, parseRoadside } from './core/roadside.js';
 
 async function getJson(url, init = {}, ms = 10000) {
   const ctl = new AbortController();
@@ -61,6 +62,24 @@ export async function fetchRoad(pos, heading) {
   const body = new URLSearchParams({ data: overpassQuery(pos[1], pos[0]) });
   const data = await getJson(OVERPASS_URL, { method: 'POST', body }, 12000);
   return pickWay(data.elements, pos, heading);
+}
+
+// Speed cameras and road hazards mapped within ~1.5 km (Overpass API). Part of the same
+// switch as speed limits. Sent: your current position.
+export async function fetchRoadside(pos) {
+  need('limits', 'Speed limits');
+  const body = new URLSearchParams({ data: roadsideQuery(pos[1], pos[0]) });
+  const data = await getJson(OVERPASS_URL, { method: 'POST', body }, 20000);
+  return parseRoadside(data.elements);
+}
+
+// Which country you're in (Overpass API), so camera warnings are only offered where they
+// are legal. Sent: your position rounded to ~10 m. Asked once, then again after ~25 km.
+export async function fetchCountry(pos) {
+  need('limits', 'Speed limits');
+  const body = new URLSearchParams({ data: countryQuery(pos[1], pos[0]) });
+  const data = await getJson(OVERPASS_URL, { method: 'POST', body }, 20000);
+  return countryFrom(data.elements);
 }
 
 // Outside temperature (Open-Meteo). Sent: your position rounded to ~10 km.

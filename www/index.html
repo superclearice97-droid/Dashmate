@@ -40,6 +40,7 @@
       <symbol id="i-moon" viewBox="0 0 24 24"><path d="M14.5 2.5A9.5 9.5 0 1 0 21.5 17 8 8 0 0 1 14.5 2.5Z"/></symbol>
       <symbol id="i-lock" viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 1 5 5v3h1a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h1V7a5 5 0 0 1 5-5Zm0 2a3 3 0 0 0-3 3v3h6V7a3 3 0 0 0-3-3Z"/></symbol>
       <symbol id="i-info" viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 1 0 20 10 10 0 0 1 0-20Zm-1 8v7h2v-7h-2Zm0-3v2h2V7h-2Z"/></symbol>
+      <symbol id="i-road" viewBox="0 0 24 24"><path d="M8.6 3h2.2l-.3 4h3l-.3-4h2.2L20 21h-6.6l-.3-4h-2.2l-.3 4H4L8.6 3Zm1.7 7-.3 4h4l-.3-4h-3.4Z"/></symbol>
       <symbol id="i-round" viewBox="0 0 24 24"><path d="M12 5a7 7 0 1 0 7 7h-2.5A4.5 4.5 0 1 1 12 7.5V5Zm0-3v8l4-4-4-4Z"/></symbol>
     </defs>
   </svg>
@@ -58,6 +59,7 @@
       <div id="car-wrap">
         <canvas id="car3d" aria-label="Your car and the traffic around it"></canvas>
         <div id="vision-chips" class="chips vision-chips"></div>
+        <span id="lead-chip" class="chip lead-chip" hidden></span>
       </div>
       <div id="street" class="street"></div>
       <div class="music-mini only-phone" data-music-mini>
@@ -130,6 +132,7 @@
           <button class="icon end" data-act="end" aria-label="End navigation"><svg><use href="#i-close"/></svg></button>
         </div>
       </div>
+      <div id="roadside" class="roadside" hidden></div>
       <div id="alert" class="alert" hidden></div>
       <div class="top-right">
         <span id="demo-badge" class="tag demo" hidden>DEMO</span>
@@ -175,6 +178,7 @@
         <button class="tab only-phone" data-tab="map" aria-label="Map"><svg><use href="#i-map"/></svg></button>
         <button class="tab app a-green" data-act="search" aria-label="Navigate"><svg><use href="#i-locate"/></svg></button>
         <button class="tab only-phone" data-tab="dash" aria-label="Speed"><svg><use href="#i-gauge"/></svg></button>
+        <button class="tab only-phone" data-tab="road" aria-label="3D road view"><svg><use href="#i-road"/></svg></button>
         <button class="tab app a-red" data-tab="music" aria-label="Music"><svg><use href="#i-music"/></svg></button>
         <button class="tab app a-dark" data-tab="camera" aria-label="Road reading"><svg><use href="#i-camera"/></svg></button>
         <button class="tab app a-blue" data-act="pair" aria-label="Pair phone and screen"><svg><use href="#i-link"/></svg></button>

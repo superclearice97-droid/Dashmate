@@ -12,7 +12,9 @@ import { initControls, openControls, closeControls, refreshControls, seg, bindFi
 import { isDaytime } from './core/sun.js';
 import { toScene, guessGear } from './core/scene.js';
 import { summarize } from './core/vision-math.js';
-import { startDeviceGps, startDemo, stopDemo, demoRunning, demoRoute, DEMO_LINE } from './location.js';
+import { startDeviceGps, startDemo, stopDemo, demoRunning, demoRoute, DEMO_LINE, demoRoadside } from './location.js';
+import { updateRoadside, setDemoRoadside, cameraWarningsHere, camerasBannedIn, roadsideCount, currentCountry } from './roadside.js';
+import { leadVehicle, timeGap, FollowWatcher } from './core/following.js';
 import * as mapView from './map.js';
 import { searchPlaces, fetchRoute, fetchRoad, fetchTemperature } from './services.js';
 import * as music from './music.js';
@@ -37,6 +39,7 @@ const isNative = () => !!window.Capacitor?.isNativePlatform?.();
 const trip = new TripTracker();
 const speedWatch = new SpeedWatcher();
 const greenWatch = new GreenLightWatcher();
+const followWatch = new FollowWatcher();
 let car3d = null;
 let snap = trip.snapshot();
 let lastFix = null;
@@ -159,6 +162,11 @@ on('fix', (fix) => {
   car3d?.setSpeed(snap.speed);
   mapView.updatePosition(pos, snap.heading, snap.speed);
   updateNav(pos, fix.accuracy);
+  const onRoute = nav?.lastProgress && !nav.lastProgress.offRoute;
+  updateRoadside({
+    pos, heading: snap.heading, speed: snap.speed, odo: snap.distance,
+    route: onRoute ? { line: nav.line, cum: nav.cum, along: nav.lastProgress.along } : null,
+  });
   updateRoad(pos);
   checkSpeed();
   maybeWeather(pos);
@@ -216,11 +224,22 @@ function checkSpeed() {
 
 // ---------------------------------------------------------------- alerts banner
 let goActive = false;
+let movingActive = false;
+let closeActive = false;
+let movingTimer = null;
 function renderAlert() {
   const el = $('#alert');
   if (goActive) {
     el.className = 'alert go';
     el.innerHTML = '<span class="lamp"><i></i></span>Green · go';
+    el.hidden = false;
+  } else if (movingActive) {
+    el.className = 'alert go';
+    el.innerHTML = '<svg class="alert-icon"><use href="#i-car"/></svg>Traffic is moving';
+    el.hidden = false;
+  } else if (closeActive) {
+    el.className = 'alert close';
+    el.innerHTML = '<svg class="alert-icon"><use href="#i-car"/></svg>Too close';
     el.hidden = false;
   } else if (slowActive) {
     const v = limitValue(road.maxspeed, settings.units);
@@ -240,19 +259,49 @@ function handleVision(v) {
     chips.innerHTML = '';
     camChips.innerHTML = '';
     car3d?.setObjects([]);
+    renderFollowing(null);
     return;
   }
   const parts = summarize(v.counts);
   const html = (parts.length ? parts : ['Nothing spotted']).map((t) => `<span class="chip">${esc(t)}</span>`).join('');
   chips.innerHTML = html;
   camChips.innerHTML = html;
-  car3d?.setObjects(toScene(v.boxes, v.aspect));
+  const scene = toScene(v.boxes, v.aspect);
+  car3d?.setObjects(scene);
   if (greenWatch.update(v.light, snap.speed, Date.now()) === 'go' && settings.greenChime) {
     goActive = true;
     chime('go');
     renderAlert();
     clearTimeout(goTimer);
     goTimer = setTimeout(() => { goActive = false; renderAlert(); }, 4500);
+  }
+  renderFollowing(leadVehicle(scene));
+}
+
+// The car ahead in your lane: distance and time gap, "Too close", "Traffic is moving".
+function renderFollowing(lead) {
+  const chip = $('#lead-chip');
+  const r = followWatch.update(lead, snap.speed, Date.now());
+  if (!lead) chip.hidden = true;
+  else {
+    const gap = timeGap(lead.z, snap.speed);
+    const d = settings.units === 'imperial' ? `${Math.round(lead.z * 3.28084 / 5) * 5} ft` : `${Math.round(lead.z)} m`;
+    chip.innerHTML = `<svg><use href="#i-car"/></svg>${d}${gap != null ? ` · ${gap.toFixed(1)} s` : ''}`;
+    chip.classList.toggle('close', r.close);
+    chip.hidden = false;
+  }
+  const close = r.close && settings.followWarn;
+  if (r.closeStarted && settings.followWarn) chime('warn');
+  if (close !== closeActive) {
+    closeActive = close;
+    renderAlert();
+  }
+  if (r.movedOff && settings.queueChime && !goActive) {
+    movingActive = true;
+    chime('go');
+    renderAlert();
+    clearTimeout(movingTimer);
+    movingTimer = setTimeout(() => { movingActive = false; renderAlert(); }, 4000);
   }
 }
 on('vision', (v) => {
@@ -360,6 +409,7 @@ async function startNavigation(dest) {
     const r = await fetchRoute(snap.pos, dest.coord, settings.avoid);
     navDest = dest;
     nav = new NavRoute(r, dest.coord);
+    rememberDestination(dest);
     mapView.showRoute(nav.line);
     mapView.overview(nav.line);
     if (r.avoidIgnored) toast('The route server couldn’t avoid what you asked on this trip, so this is the normal route.', 6000);
@@ -369,6 +419,14 @@ async function startNavigation(dest) {
   } catch (e) {
     toast(e.name === 'AbortError' ? 'The route server didn’t answer. Try again.' : e.message);
   }
+}
+
+// The last few places you navigated to, kept only on this device (Controls › Navigation › Clear).
+function rememberDestination(dest) {
+  if (!dest?.coord || dest.saved) return;
+  const entry = { title: dest.title, subtitle: dest.subtitle || '', coord: dest.coord };
+  const rest = settings.recent.filter((r) => r.title !== entry.title || distance(r.coord, entry.coord) > 50);
+  saveSettings({ recent: [entry, ...rest].slice(0, 5) });
 }
 
 function endNavigation() {
@@ -388,7 +446,9 @@ on('demo', (running) => {
     navDest = { title: 'Demo', coord: DEMO_LINE[DEMO_LINE.length - 1] };
     nav = new NavRoute(demoRoute(), navDest.coord);
     mapView.showRoute(nav.line);
+    setDemoRoadside(demoRoadside());
   } else {
+    setDemoRoadside(null);
     if (nav && navDest?.title === 'Demo') endNavigation();
     road = { name: '', maxspeed: null };
     renderRoad();
@@ -399,6 +459,17 @@ on('demo', (running) => {
 });
 
 // ---------------------------------------------------------------- search sheet
+// Home, Work and recent destinations, shown before you search.
+function shortcuts() {
+  return [settings.home, settings.work, ...settings.recent].filter(Boolean);
+}
+function shortcutList() {
+  const list = shortcuts();
+  if (!list.length) return '<li class="empty">Search for an address, a business or a city.</li>';
+  return list.map((f, i) => `<li data-i="${i}"><svg><use href="${f.title === 'Home' || f.title === 'Work' ? '#i-flag' : '#i-locate'}"/></svg>`
+    + `<span class="t"><b>${esc(f.title)}</b><span>${esc(f.subtitle || '')}</span></span></li>`).join('');
+}
+
 function openSearch() {
   if (!settings.online.nav) {
     openSheet(`${head('Where to?')}<p>Directions are turned off. They need the internet: your search text and route go to free OpenStreetMap services.</p>
@@ -410,11 +481,11 @@ function openSearch() {
   openSheet(`${head('Where to?')}
     <form class="search-row" autocomplete="off"><input type="search" placeholder="Address or place" enterkeyhint="search" aria-label="Destination">
     <button class="btn primary">Search</button></form>
-    <ul class="list" id="results"><li class="empty">Search for an address, a business or a city.</li></ul>
+    <ul class="list" id="results">${shortcutList()}</ul>
     <p class="muted small">Search © Photon by komoot · OpenStreetMap contributors</p>`, (card) => {
     const input = $('input', card);
     const list = $('#results', card);
-    let found = [];
+    let found = shortcuts();
     setTimeout(() => input.focus(), 50);
     $('form', card).addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -847,6 +918,29 @@ initControls({
     },
   },
   map: { is3d: mapView.is3d, toggle3d: mapView.toggle3d },
+  roadside: {
+    allowed: cameraWarningsHere,
+    bannedIn: camerasBannedIn,
+    count: roadsideCount,
+    preview(kind) {
+      const cam = kind === 'camera';
+      const mode = cam ? settings.cameraAlert : settings.hazardAlert;
+      if (mode === 'banner') return toast('Banner only: no sound');
+      chime(cam ? 'camera' : 'ding');
+      const imperial = settings.units === 'imperial';
+      if (mode === 'voice' && settings.voice) {
+        speak(cam ? (imperial ? 'Speed camera in 1300 feet, limit 30' : 'Speed camera in 400 metres, limit 50')
+          : (imperial ? 'Speed bump in 300 feet' : 'Speed bump in 100 metres'), { queue: true });
+      }
+    },
+  },
+  places: {
+    setHere(kind) {
+      if (!snap.pos) return toast('Waiting for your location…');
+      saveSettings({ [kind]: { title: kind === 'home' ? 'Home' : 'Work', subtitle: 'Saved place', coord: snap.pos, saved: true } });
+      return toast(`${kind === 'home' ? 'Home' : 'Work'} saved on this device`);
+    },
+  },
   pairing: { role: linkRole, open: openPair },
   demo: { running: demoRunning, toggle: () => (demoRunning() ? stopDemo() : startDemo()) },
   trips: {
@@ -1006,7 +1100,7 @@ function onboarding(done) {
     <p>A dashboard for any car: map and directions, your speed and the speed limit, your music, and an experimental road camera.</p>
     <h3>Before you drive</h3>
     <ul class="legal"><li>Set things up while parked. Keep your eyes on the road.</li>
-    <li>Speed limits and directions come from OpenStreetMap and can be wrong. Posted signs always win.</li>
+    <li>Speed limits, speed cameras and directions come from OpenStreetMap and can be wrong. Posted signs always win.</li>
     <li>Road reading is experimental and is <b>not</b> a safety system.</li></ul>
     <label class="check"><input type="checkbox" data-ok> <span>I've read and agree to the <a href="#" data-legal="terms">Terms &amp; safety</a> and the <a href="#" data-legal="privacy">Privacy</a> notice.</span></label>
     <div class="row-btns"><button class="btn primary block" data-next disabled>Continue</button></div>`, (card) => {

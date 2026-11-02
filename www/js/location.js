@@ -73,6 +73,20 @@ export function demoRoute() {
   return { geometry: { coordinates: DEMO_LINE }, legs, distance: total, duration: total / 11 };
 }
 
+// Made-up cameras and hazards along the demo drive, so their cards can be seen at home.
+export function demoRoadside() {
+  const cum = cumulative(DEMO_LINE);
+  const at = (m) => pointAt(DEMO_LINE, cum, m);
+  const mph = (v) => v * 1.609344;
+  return [
+    { id: 'demo-bump', kind: 'bump', label: 'Speed bump', pos: at(300), dir: null, limit: null },
+    { id: 'demo-cam', kind: 'camera', label: 'Speed camera', pos: at(650), dir: null, limit: mph(25) },
+    { id: 'demo-zone', kind: 'average', label: 'Average speed zone', pos: at(cum[2] + 60), end: at(cum[3] - 120), dir: null, limit: mph(30) },
+    { id: 'demo-rail', kind: 'rail', label: 'Railway crossing', pos: at(cum[3] + 150), dir: null, limit: null },
+    { id: 'demo-school', kind: 'hazard', label: 'School zone', pos: at(cum[4] + 200), dir: null, limit: null },
+  ];
+}
+
 export function startDemo() {
   stopDemo();
   const cum = cumulative(DEMO_LINE);
@@ -109,9 +123,12 @@ export function startDemo() {
 
 // What the camera "sees" on the demo drive: a car ahead, traffic in the next lanes,
 // and at the red light a stopped queue, a crossing pedestrian and the light itself.
+let greenAt = null;
 function demoView(along, stopAt, speed, light, t) {
   const boxes = [];
-  const gap = light ? Math.max(7, stopAt - along + 7) : 18 + speed * 1.2 + 4 * Math.sin(t / 5);
+  const pullAway = light === 'green' ? Math.max(0, t - (greenAt ??= t)) * 4 : 0;
+  if (light !== 'green') greenAt = null;
+  const gap = light ? Math.max(7, stopAt - along + 7) + pullAway : 18 + speed * 1.2 + 4 * Math.sin(t / 5);
   boxes.push(boxFor('car', 0, gap));
   boxes.push(boxFor('car', 3.6, 28 + 8 * Math.sin(t / 7)));
   boxes.push(boxFor('car', -3.6, 45 + 10 * Math.cos(t / 9)));

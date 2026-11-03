@@ -40,7 +40,10 @@ A Wi-Fi-only iPad has no GPS chip; it only guesses its location from Wi-Fi (Dash
 4. Point the **phone's normal Camera app** at the iPad's code and tap the banner. It opens DashMate on the phone. (Or in DashMate on the phone: **pair** › **This is the phone**, then scan.)
 5. The phone shows its own code. Hold it up to the iPad's front camera.
 6. Both say **Paired**. The iPad now shows the phone's speed and position.
-7. The phone says **You can lock this phone and put it away**. Lock it, or switch to another app: it keeps sending its location to the iPad about once a second. If the phone asks to allow DashMate to find devices on your **local network**, tap **Allow** (it needs that to reach the iPad).
+7. If the phone asks to allow DashMate to find devices on your **local network**, tap **Allow** (an iPhone needs that to reach the iPad). Keep DashMate open on the phone for a few seconds while it checks that the iPad is receiving.
+   - When it says **✓ Your screen is receiving it. You can lock this phone**, lock it or switch to another app: it keeps sending its location to the iPad about once a second.
+   - If it says **Don't lock this phone yet**, it tells you why (for example the Local Network switch on an iPhone, or the iPad being on a different Wi-Fi) and keeps working with its screen on until that's fixed. Once it's fixed it switches to "you can lock" by itself.
+   - Both devices need the **same DashMate version**; they tell you if they don't match.
    - **Android** shows a "DashMate is sharing GPS" notification the whole time, with a **Stop sharing** button.
    - **iPhone** shows the location arrow in the status bar. Don't swipe DashMate away in the app switcher; that stops it.
 8. When you're done, tap **Stop sharing** (in DashMate on the phone, or in the Android notification).

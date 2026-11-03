@@ -1,5 +1,8 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.12.0
+- **Fix for the phone losing the iPad when its screen turns off.** Install 0.12.0 on **both** devices and pair again. On iPhone, tap **Allow** when asked about the local network. Keep DashMate open on the phone until it says **✓ Your screen is receiving it. You can lock this phone**; if something is blocking it, the phone now tells you what and how to fix it (**experimental**: checked in a browser with the phone parts simulated, not yet on real phones)
+
 ### New in 0.11.0
 - **Real streets in the car view**: your car drives on the real streets around you with 3D buildings and your route as a blue lane, on the iPad and in the phone's 3D tab. Prefer the old look? Controls › Display › Car view › Simple road (**experimental**: checked with test map tiles, not yet with the real map or on an iPad)
 

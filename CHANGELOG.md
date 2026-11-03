@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.12.0 — 2026-11-03
+
+- **Fix: the paired phone losing the iPad when its screen turns off.** Two causes:
+  - On iPhone, iOS blocks sending to devices on the local network until you allow DashMate, and it blocks it silently (no question) once the app is in the background. DashMate now asks for local network access while you're pairing, with the phone in your hand.
+  - The phone said "you can lock this phone" as soon as it started sending, without knowing whether the iPad received anything. Now the iPad confirms it's receiving, and only then does the phone say you can lock it. Until then the phone keeps its screen on, keeps sending over the pairing link, and says exactly what's wrong (Local Network switch on iPhone, the background service not starting, no GPS yet, or the iPad not receiving, for example because it's on another Wi-Fi). It switches over by itself once it works.
+- The phone and the iPad tell each other their DashMate version and warn if they differ.
+- The iPad's pairing screen shows whether it's receiving the phone in the background.
+
 ## 0.11.0 — 2026-11-03
 
 - **Real streets in the car view**: the 3D car now drives on the real streets around you, with the buildings raised in 3D and your route as a blue lane, seen from just behind the car (a second map using the same OpenFreeMap tiles, its camera placed exactly where the 3D view's camera is, so the car and what road reading sees line up with the streets). It glides between GPS updates. Works on the iPad screen and in the phone's 3D tab.

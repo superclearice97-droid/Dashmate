@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.11.0 — 2026-11-03
+
+- **Real streets in the car view**: the 3D car now drives on the real streets around you, with the buildings raised in 3D and your route as a blue lane, seen from just behind the car (a second map using the same OpenFreeMap tiles, its camera placed exactly where the 3D view's camera is, so the car and what road reading sees line up with the streets). It glides between GPS updates. Works on the iPad screen and in the phone's 3D tab.
+- Controls › Display › **Car view**: Real streets or Simple road (the drawn road from before). With the Map switched off, the simple road is used.
+- The speed and gear stay readable over buildings.
+- The average-speed-zone-ahead card uses the zone icon.
+- Privacy policy notes that the car view uses the same map pieces as the map.
+
 ## 0.10.0 — 2026-11-03
 
 - **Speed camera warnings** (experimental): fixed, red-light and average-speed cameras from OpenStreetMap, about 20 seconds ahead (300 m in town, up to 1 km on motorways), only on your road or route and in your direction where the map records it. A card counts down the distance, shows the limit and turns red when you're faster; in an average-speed zone it shows your average speed and the distance to the end. Alert: Voice, Tone or Banner only (Controls › Navigation), with a Listen button. Red-light cameras can be switched off separately.

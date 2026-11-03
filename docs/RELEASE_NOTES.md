@@ -1,5 +1,8 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.11.0
+- **Real streets in the car view**: your car drives on the real streets around you with 3D buildings and your route as a blue lane, on the iPad and in the phone's 3D tab. Prefer the old look? Controls › Display › Car view › Simple road (**experimental**: checked with test map tiles, not yet with the real map or on an iPad)
+
 ### New in 0.10.0
 - **Speed camera warnings** from OpenStreetMap (fixed, red-light, average-speed zones), about 20 seconds ahead, on your road or route. The card counts down, shows the limit and turns red if you're faster; in average-speed zones it shows your average. Voice, tone or banner (Controls › Navigation). **Not offered where the law forbids it** (Germany, France, Switzerland, Austria, Belgium, Luxembourg, Liechtenstein, Cyprus, North Macedonia, Turkey, Kuwait)
 - **Road hazard warnings**: speed bumps, railway crossings and hazard signs, each switchable

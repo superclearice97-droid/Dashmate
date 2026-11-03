@@ -15,7 +15,7 @@ export const PRIVACY = `
 <p>A direct, encrypted connection between your own two devices. No server is involved; the QR codes you scan contain everything needed.</p>
 <h4>Online features (each can be switched off in Controls)</h4>
 <ul>
-  <li><b>Map</b>: map pieces come from OpenFreeMap (tiles.openfreemap.org), which sees which area you are looking at.</li>
+  <li><b>Map</b>: map pieces come from OpenFreeMap (tiles.openfreemap.org), which sees which area you are looking at. The car view's streets and buildings use the same map pieces for the area around you, and go off with this switch.</li>
   <li><b>Directions &amp; search</b>: your search text and approximate area (about 1 km) go to Photon by komoot (photon.komoot.io); your start and destination go to the OSRM route server run by FOSSGIS (routing.openstreetmap.de).</li>
   <li><b>Speed limits, street names, speed cameras &amp; road hazards</b>: your current position is sent to the Overpass API (overpass-api.de) every few hundred metres (for the road you're on) and about every 500 m (for cameras, speed bumps, railway crossings and hazard signs within about 1.5 km). With speed camera warnings on, your position is also used now and then (about every 25 km) to look up which country you are in, so camera warnings are only offered where they are legal. The country is kept in memory only.</li>
   <li><b>Spotify</b> (off until you tap Connect Spotify): you sign in on Spotify's own page; DashMate never sees your password. While DashMate is open and connected, it asks Spotify what's playing every few seconds and sends your play/pause/skip and playlist taps. Your Spotify access keys are kept only on this device; Disconnect Spotify deletes them. Spotify's privacy policy applies to what Spotify receives.</li>

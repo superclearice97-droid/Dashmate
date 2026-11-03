@@ -41,6 +41,7 @@ const speedWatch = new SpeedWatcher();
 const greenWatch = new GreenLightWatcher();
 const followWatch = new FollowWatcher();
 let car3d = null;
+let streetView = null;
 let snap = trip.snapshot();
 let lastFix = null;
 let nav = null;
@@ -80,6 +81,7 @@ function applyTheme() {
   document.documentElement.dataset.theme = t;
   mapView.setMapTheme(t);
   car3d?.setTheme(t);
+  streetView?.setTheme(t);
 }
 
 function setTab(tab) {
@@ -160,6 +162,7 @@ on('fix', (fix) => {
     refreshControls();
   }
   car3d?.setSpeed(snap.speed);
+  streetView?.update(pos, snap.heading, snap.speed);
   mapView.updatePosition(pos, snap.heading, snap.speed);
   updateNav(pos, fix.accuracy);
   const onRoute = nav?.lastProgress && !nav.lastProgress.offRoute;
@@ -390,7 +393,7 @@ async function reroute(pos) {
   try {
     const r = await fetchRoute(pos, navDest.coord, settings.avoid);
     nav = new NavRoute(r, navDest.coord);
-    mapView.showRoute(nav.line);
+    showRoute(nav.line);
     speak('Rerouting');
   } catch (e) {
     console.warn('[reroute]', e.message);
@@ -410,7 +413,7 @@ async function startNavigation(dest) {
     navDest = dest;
     nav = new NavRoute(r, dest.coord);
     rememberDestination(dest);
-    mapView.showRoute(nav.line);
+    showRoute(nav.line);
     mapView.overview(nav.line);
     if (r.avoidIgnored) toast('The route server couldn’t avoid what you asked on this trip, so this is the normal route.', 6000);
     else $('#toast').hidden = true;
@@ -432,7 +435,7 @@ function rememberDestination(dest) {
 function endNavigation() {
   nav = null;
   navDest = null;
-  mapView.showRoute(null);
+  showRoute(null);
   $('#nav-card').hidden = true;
   $('#turn-list').hidden = true;
   $('#where-to').hidden = false;
@@ -445,7 +448,7 @@ on('demo', (running) => {
     trip.reset();
     navDest = { title: 'Demo', coord: DEMO_LINE[DEMO_LINE.length - 1] };
     nav = new NavRoute(demoRoute(), navDest.coord);
-    mapView.showRoute(nav.line);
+    showRoute(nav.line);
     setDemoRoadside(demoRoadside());
   } else {
     setDemoRoadside(null);
@@ -990,6 +993,7 @@ onSettings((s) => {
   $('#mute-icon').innerHTML = `<use href="${s.voice || s.chimes ? '#i-volume' : '#i-mute'}"/>`;
   renderRoad();
   if (prev.online.map !== s.online.map) setupMap();
+  else if (prev.carView !== s.carView) setupStreets();
   if (!s.online.limits) { road = { name: road.name, maxspeed: null }; renderRoad(); }
   if (!s.online.weather) $('#temp').textContent = '';
   if (!s.online.nav && nav && !demoRunning()) endNavigation();
@@ -1018,7 +1022,8 @@ async function setupMap() {
   try {
     await loadScript('vendor/maplibre/maplibre-gl.js');
     mapView.createMap($('#map'), { theme: currentTheme(), center: snap.pos });
-    if (nav) mapView.showRoute(nav.line);
+    if (nav) showRoute(nav.line);
+    setupStreets();
   } catch (e) {
     console.warn('[map]', e);
     $('#map-off').hidden = false;
@@ -1026,6 +1031,40 @@ async function setupMap() {
   }
 }
 on('follow', (f) => $('#recenter').classList.toggle('off', !f));
+
+function showRoute(coords) {
+  mapView.showRoute(coords);
+  streetView?.showRoute(coords);
+}
+
+// Real streets and buildings behind the 3D car (Controls › Display › Car view). Uses the
+// same map tiles as the main map, so it follows the Map switch too.
+async function setupStreets() {
+  const want = settings.online.map && settings.carView === 'streets' && car3d && window.maplibregl;
+  if (!want) {
+    streetView?.destroy();
+    streetView = null;
+    car3d?.setStreets(false);
+    $('#street-view').hidden = true;
+    return;
+  }
+  if (streetView) return;
+  try {
+    const { createStreetView } = await import('./streetview.js');
+    $('#street-view').hidden = false;
+    streetView = createStreetView($('#street-view'), {
+      theme: currentTheme(),
+      camera: () => car3d.camera(),
+      onReady: (on) => car3d?.setStreets(on),
+    });
+    if (snap.pos) streetView?.update(snap.pos, snap.heading, snap.speed);
+    if (nav) streetView?.showRoute(nav.line);
+    streetView?.start();
+  } catch (e) {
+    console.warn('[streets]', e);
+    streetView = null;
+  }
+}
 
 // ---------------------------------------------------------------- buttons
 document.addEventListener('click', (e) => {

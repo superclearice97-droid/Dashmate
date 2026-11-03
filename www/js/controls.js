@@ -148,6 +148,7 @@ const RENDER = {
   display: () => row('Appearance', 'Auto switches to dark at sunset where you are', seg('theme', settings.theme, [['auto', 'Auto'], ['light', 'Light'], ['dark', 'Dark']]), 'theme dark light night mode look')
     + row('Distance &amp; speed units', '', seg('units', settings.units, [['imperial', 'mph'], ['metric', 'km/h']]), 'miles kilometres km mph')
     + row('Time format', '', seg('time24', settings.time24 ? '24' : '12', [['12', '12-hour'], ['24', '24-hour']]), 'clock')
+    + row('Car view', 'Real streets and buildings around your car (uses the Map connection), or a simple drawn road', seg('carView', settings.carView, [['streets', 'Real streets'], ['road', 'Simple road']]), 'buildings 3d road background')
     + row('Car color', 'In the car view', `<span class="swatches">${COLORS.map((c) => `<button data-ctl="color" data-color="${c}" style="background:${c}" class="${c === settings.carColor ? 'on' : ''}" aria-label="Car color ${c}"></button>`).join('')}</span>`, 'paint colour'),
   navigation: () => row('Voice guidance', 'Spoken turn-by-turn directions', sw('voice', settings.voice), 'speak directions')
     + placeRow('home', 'Home') + placeRow('work', 'Work')

@@ -8,6 +8,7 @@ const DEFAULTS = {
   units: defaultUnits(typeof navigator !== 'undefined' ? navigator.language : 'en-US'),
   theme: 'auto',            // auto | light | dark
   carColor: '#eef0f3',
+  carView: 'streets',       // car view background: streets (real streets & buildings) | road (drawn road)
   volume: 0.6,              // DashMate's own sounds: music and spoken directions
   voice: true,              // spoken directions
   chimes: true,             // alert sounds

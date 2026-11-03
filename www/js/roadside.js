@@ -123,7 +123,7 @@ function cameraCard(c) {
   }
   const title = c.type === 'redlight' ? 'Red-light camera' : c.type === 'average' ? 'Average speed zone ahead' : 'Speed camera';
   return `<div class="rs-card rs-cam${c.over ? ' over' : ''}" role="status">
-    <span class="rs-icon">${ICON[c.type === 'redlight' ? 'redlight' : 'camera']}</span>
+    <span class="rs-icon">${ICON[c.type === 'redlight' ? 'redlight' : c.type === 'average' ? 'zone' : 'camera']}</span>
     <span class="rs-main"><small>${title}</small><b>${esc(distanceText(c.dist, u))}</b></span>
     ${sign(c.limit)}<span class="rs-bar"><i style="width:${Math.round(c.progress * 100)}%"></i></span></div>`;
 }

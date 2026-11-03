@@ -9,7 +9,7 @@ import { emit, on } from './bus.js';
 import { encodeDescription, decodeDescription } from './core/pairing-code.js';
 import { KINDS } from './core/vision-math.js';
 import { fixFromMessage, beaconOffer } from './core/gps.js';
-import { beaconSending } from './beacon.js';
+import { beaconConfirmed } from './beacon.js';
 
 let pc = null;
 let channel = null;
@@ -51,10 +51,15 @@ function receive(text) {
   if (!role || typeof text !== 'string' || text.length > 4000) return;
   let m;
   try { m = JSON.parse(text); } catch { return; }
+  if (m.t === 'hello' && typeof m.v === 'string' && /^\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(m.v)) {
+    emit('peer-hello', m.v);
+    return;
+  }
   if (role === 'phone') {
-    // The screen's invitation to keep sending in the background.
+    // The screen's invitation to keep sending in the background, and its confirmation.
     const offer = beaconOffer(m);
     if (offer) emit('beacon-offer', offer);
+    else if (m.t === 'beacon-ack' && Number.isInteger(m.n) && m.n > 0) emit('beacon-ack', m.n);
     return;
   }
   if (m.t === 'fix') {
@@ -77,8 +82,12 @@ function send(obj) {
   if (channel?.readyState === 'open') channel.send(JSON.stringify(obj));
 }
 
-// Screen: hand the phone the key, port and addresses for background sending.
+// Screen: hand the phone the key, port and addresses for background sending, and tell it
+// when positions arrive that way.
 export const sendBeaconOffer = (offer) => role === 'screen' && send(offer);
+export const sendBeaconAck = (n) => role === 'screen' && send({ t: 'beacon-ack', n });
+// Both: which DashMate version this is, so a mismatch can be pointed out.
+export const sendHello = (v) => send({ t: 'hello', v });
 
 // ---- Screen side (iPad): show a code, then read the phone's reply code.
 export async function startAsScreen() {
@@ -122,7 +131,7 @@ export const linkRole = () => (channel?.readyState === 'open' ? role : null);
 
 // The phone forwards its own GPS and road reading to the screen.
 on('fix', (f) => {
-  if (role !== 'phone' || f.source !== 'device' || beaconSending()) return; // the background link sends it
+  if (role !== 'phone' || f.source !== 'device' || beaconConfirmed()) return; // the background link sends it
   const now = Date.now();
   if (now - lastFixSent < 400) return;
   lastFixSent = now;

@@ -44,3 +44,23 @@ export function gpsQuality(source, accuracy) {
   if (accuracy > 30) return { label: `GPS · ${where}`, level: 'weak' };
   return { label: `GPS · ${where}`, level: 'good' };
 }
+
+// The phone's own record of the background link ({sending, fixes, sent, failed, lastError}
+// from the native plugin) -> what to tell the user while the screen hasn't confirmed it's
+// receiving. {waiting: true} means "give it a moment"; otherwise `text` says what's wrong.
+export function linkProblem(status, platform) {
+  const why = status?.lastError ? ` (${String(status.lastError).slice(0, 80)})` : '';
+  if (!status?.sending) {
+    return { waiting: false, text: `The background service on this phone didn’t start${why}. Check DashMate has precise location permission, then pair again.` };
+  }
+  if (!status.fixes) return { waiting: true, text: 'Waiting for this phone’s GPS. It needs a view of the sky.' };
+  if (!status.sent && status.failed) {
+    return platform === 'ios'
+      ? { waiting: false, text: `This iPhone is blocking DashMate from reaching your iPad${why}. Turn on Settings › Privacy & Security › Local Network › DashMate, then pair again.` }
+      : { waiting: false, text: `This phone couldn’t send to the screen${why}. Check the screen is joined to this phone’s hotspot, then pair again.` };
+  }
+  return { waiting: false, text: 'This phone is sending, but the screen isn’t receiving it. Make sure the screen is joined to this phone’s hotspot (not another Wi-Fi network) and has DashMate open, then pair again.' };
+}
+
+// Both devices should run the same DashMate version for the background link.
+export const sameVersion = (a, b) => typeof a === 'string' && typeof b === 'string' && a === b;

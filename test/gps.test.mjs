@@ -39,3 +39,17 @@ test('GPS chip says when the iPad only has Wi-Fi location', () => {
   assert.deepEqual(gpsQuality('phone', 300), { label: 'Weak GPS · Phone', level: 'poor' });
   assert.equal(gpsQuality('demo', 5).label, 'Demo drive');
 });
+
+import { linkProblem } from '../www/js/core/gps.js';
+
+test('background link check explains what is wrong', () => {
+  assert.match(linkProblem({ sending: false, lastError: 'precise location permission is off' }, 'android').text, /didn’t start \(precise location/);
+  assert.equal(linkProblem({ sending: true, fixes: 0, sent: 0, failed: 0 }, 'ios').waiting, true);
+  const ios = linkProblem({ sending: true, fixes: 5, sent: 0, failed: 5, lastError: 'No route to host' }, 'ios');
+  assert.equal(ios.waiting, false);
+  assert.match(ios.text, /Local Network › DashMate/);
+  assert.match(ios.text, /No route to host/);
+  assert.match(linkProblem({ sending: true, fixes: 5, sent: 0, failed: 5, lastError: 'Network is unreachable' }, 'android').text, /hotspot/);
+  assert.match(linkProblem({ sending: true, fixes: 8, sent: 8, failed: 0 }, 'android').text, /isn’t receiving/);
+  assert.match(linkProblem(null, 'ios').text, /didn’t start/);
+});

@@ -7,7 +7,7 @@ import { TripTracker } from './core/trip.js';
 import { NavRoute } from './core/route.js';
 import { SpeedWatcher, GreenLightWatcher, warningEffects } from './core/alerts.js';
 import { TripLog } from './core/trips.js';
-import { gpsQuality } from './core/gps.js';
+import { gpsQuality, linkProblem, sameVersion } from './core/gps.js';
 import { initControls, openControls, closeControls, refreshControls, seg, bindFields, onlineFields } from './controls.js';
 import { isDaytime } from './core/sun.js';
 import { toScene, guessGear } from './core/scene.js';
@@ -20,8 +20,11 @@ import { searchPlaces, fetchRoute, fetchRoad, fetchTemperature } from './service
 import * as music from './music.js';
 import { chime, speak } from './sound.js';
 import { startVision, stopVision, visionRunning } from './vision.js';
-import { startAsScreen, finishAsScreen, startAsPhone, closeLink, linkRole, sendBeaconOffer } from './link.js';
-import { listenForPhone, stopListening, hearingPhone, beaconListening, lastBeaconFix, startSending, stopSending, beaconSending, refreshSending } from './beacon.js';
+import { startAsScreen, finishAsScreen, startAsPhone, closeLink, linkRole, sendBeaconOffer, sendBeaconAck, sendHello } from './link.js';
+import {
+  listenForPhone, stopListening, hearingPhone, beaconListening, lastBeaconFix, beaconReceived, startSending, stopSending,
+  beaconSending, beaconConfirmed, markConfirmed, refreshSending, sendStatus, platform,
+} from './beacon.js';
 import { openCamera, closeCamera, loadScript } from './camera.js';
 import { qrSvg, scanQr } from './qr.js';
 import { initSystemMusic, systemStatus, systemNow, requestSystemAccess, controlSystem, systemPlaylists, playSystemPlaylist } from './media.js';
@@ -674,7 +677,7 @@ function openApps() {
 
 // ---------------------------------------------------------------- pairing
 function openPair() {
-  if (beaconSending()) return openSharingSheet('background');
+  if (beaconSending()) return openSharingSheet(beaconConfirmed() ? 'background' : 'checking');
   if (!linkRole() && hearingPhone()) {
     openSheet(`${head('Paired')}<p>This screen is getting the phone’s GPS over the background link.</p>
       <div class="row-btns"><button class="btn danger" data-unpair>Disconnect</button></div>`, (card) => {
@@ -684,8 +687,11 @@ function openPair() {
   }
   const role = linkRole();
   if (role) {
+    const bg = role === 'screen'
+      ? `<p class="small">${hearingPhone() ? `✓ Receiving the phone’s position in the background (${beaconReceived()} so far). The phone can be locked.` : 'Not receiving the background link yet. Check the phone’s DashMate screen.'}</p>`
+      : '';
     openSheet(`${head('Paired')}<p>This device is connected as the <b>${role === 'phone' ? 'phone' : 'screen'}</b>.
-      ${role === 'phone' ? 'It sends its GPS (and road reading, if the camera is on) to the screen.' : 'It shows the phone’s GPS and road reading.'}</p>
+      ${role === 'phone' ? 'It sends its GPS (and road reading, if the camera is on) to the screen.' : 'It shows the phone’s GPS and road reading.'}</p>${bg}
       <div class="row-btns"><button class="btn danger" data-unpair>Disconnect</button></div>`, (card) => {
       $('[data-unpair]', card).onclick = () => { stopSharing(); stopListening(); closeSheet(); toast('Disconnected'); };
     });
@@ -781,39 +787,84 @@ function pairAsPhone(code = null) {
   })();
 }
 
+// ---- Pairing link and the background link (see beacon.js).
+// The phone only says "you can lock it" once the screen confirms it is receiving positions
+// over the background link; otherwise it says exactly what's wrong and keeps sending over
+// the pairing link with its screen on.
+let peerVersion = null;
+let checkTimer = null;
+
+on('peer-hello', (v) => {
+  peerVersion = v;
+  if (!sameVersion(v, VERSION)) {
+    const other = linkRole() === 'phone' ? 'screen' : 'phone';
+    toast(`The ${other} has DashMate ${v} and this device has ${VERSION}. Install the same version on both so the phone can keep sending with its screen off.`, 8000);
+  }
+});
+
 on('link', async (s) => {
   if (s.state === 'connected') {
     closeSheet();
+    peerVersion = null;
+    sendHello(VERSION);
     if (s.role === 'phone') {
       startDeviceGps();
       openSharingSheet('starting');
-      // A screen without the background link (web version) never sends an offer.
-      setTimeout(() => { if (sharingMode === 'starting') openSharingSheet('foreground'); }, 5000);
+      // An older screen never sends an offer.
+      setTimeout(() => { if (sharingMode === 'starting') openSharingSheet('foreground'); }, 6000);
       return;
     }
     toast('Paired · using the phone’s GPS');
     // Invite the phone to keep sending with its screen off (native background link).
     const offer = await listenForPhone();
     if (offer) sendBeaconOffer(offer);
+    else toast('This screen can’t receive the background link, so keep DashMate open on the phone.', 6000);
+    setTimeout(() => {
+      if (linkRole() === 'screen' && !peerVersion) toast(`Update DashMate on the phone to ${VERSION} so it can keep sending with its screen off.`, 8000);
+    }, 6000);
   } else if (s.state === 'lost') {
     // The background link carries on without the pairing link.
-    if (s.role === 'phone' ? beaconSending() : hearingPhone()) return;
+    if (s.role === 'phone' ? beaconConfirmed() : hearingPhone()) return;
+    clearInterval(checkTimer);
     toast('Pairing lost. Pair again to reconnect.');
   }
+});
+
+// Screen: tell the phone positions are arriving over the background link.
+let lastAck = 0;
+on('remote-fix', () => {
+  if (!beaconListening() || Date.now() - lastAck < 1500 || !beaconReceived()) return;
+  lastAck = Date.now();
+  sendBeaconAck(beaconReceived());
 });
 
 // Phone: the screen sent the key and address for background sending.
 on('beacon-offer', async (offer) => {
   const r = await startSending(offer);
-  if (r === 'ok') {
-    setScreenAwake(false);
-    openSharingSheet('background');
-  } else {
-    openSharingSheet(r === 'no-location' ? 'no-location' : 'foreground');
-  }
+  if (r !== 'ok') return openSharingSheet(r === 'no-location' ? 'no-location' : 'foreground');
+  openSharingSheet('checking');
+  const started = Date.now();
+  clearInterval(checkTimer);
+  checkTimer = setInterval(async () => {
+    if (beaconConfirmed() || !beaconSending()) return clearInterval(checkTimer);
+    if (Date.now() - started < 8000) return;
+    const problem = linkProblem(await sendStatus(), platform());
+    if (problem.waiting && Date.now() - started < 60000) return openSharingSheet('checking', problem.text);
+    if (sharingMode !== 'problem') openSharingSheet('problem', problem.text);
+  }, 2000);
+});
+
+// Phone: the screen is receiving. Now it's safe to lock the phone.
+on('beacon-ack', () => {
+  if (beaconConfirmed() || !beaconSending()) return;
+  markConfirmed();
+  clearInterval(checkTimer);
+  setScreenAwake(false);
+  openSharingSheet('background');
 });
 
 function stopSharing() {
+  clearInterval(checkTimer);
   if (beaconSending()) stopSending();
   closeLink();
   setScreenAwake(true);
@@ -821,16 +872,19 @@ function stopSharing() {
 
 const SHARING_TEXT = {
   starting: 'Setting up… Keep DashMate open for a moment.',
-  background: 'You can <b>lock this phone and put it away</b>, or use other apps. It keeps sending its location straight to the screen over your hotspot, encrypted.',
-  foreground: 'Keep DashMate open on this phone. Background sending isn’t available here, so the phone stops sending if you leave DashMate.',
+  checking: 'Checking that your screen receives this phone’s position in the background… <b>Keep DashMate open</b> until it says you can lock the phone.',
+  background: '✓ Your screen is receiving it. You can <b>lock this phone and put it away</b>, or use other apps. It keeps sending its location straight to the screen over your hotspot, encrypted.',
+  problem: '<b>Don’t lock this phone yet.</b> Your screen isn’t receiving the background link, so it only gets this phone’s position while DashMate is open here.',
+  foreground: 'Keep DashMate open on this phone. Background sending isn’t available with this screen, so the phone stops sending if you leave DashMate. Install the same DashMate version on both devices to fix this.',
   'no-location': 'DashMate needs location permission on this phone to share it. Allow it in the phone’s settings, then pair again.',
 };
 
 let sharingMode = null;
-function openSharingSheet(mode) {
+function openSharingSheet(mode, detail = '') {
   const android = /Android/i.test(navigator.userAgent);
   openSheet(`${head('Sharing GPS with your screen')}
     <p>${SHARING_TEXT[mode]}</p>
+    ${detail ? `<p class="${mode === 'problem' ? 'link-problem' : 'muted small'}">${esc(detail)}</p>` : ''}
     ${mode === 'background' ? `<p class="muted small">${android
     ? 'Android shows a “DashMate is sharing GPS” notification while this runs; it has a Stop button too.'
     : 'iPhone shows the location arrow in the status bar while this runs. If it asks to find devices on your local network, tap Allow.'}</p>` : ''}

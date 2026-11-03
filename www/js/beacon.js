@@ -17,9 +17,11 @@ function native() {
 }
 
 let sending = false;
+let confirmed = false;     // phone: the screen said it is receiving
 let listening = false;
 let fixHandle = null;
 let lastFix = 0;
+let received = 0;
 
 function randomKey() {
   const b = crypto.getRandomValues(new Uint8Array(32));
@@ -38,6 +40,7 @@ export async function listenForPhone() {
       const f = fixFromMessage(m);
       if (!f) return;
       lastFix = Date.now();
+      received++;
       emit('remote-fix', f);
     });
     const r = await p.listen({ key: k });
@@ -47,6 +50,7 @@ export async function listenForPhone() {
       return null;
     }
     listening = true;
+    received = 0;
     return { t: 'beacon', k, p: r.port, a };
   } catch (e) {
     console.warn('[beacon] listen', e);
@@ -66,6 +70,7 @@ export const beaconListening = () => listening;
 // The screen is getting positions from the phone over the background link right now.
 export const hearingPhone = (ms = 10000) => listening && Date.now() - lastFix < ms;
 export const lastBeaconFix = () => lastFix;
+export const beaconReceived = () => received;
 
 // ---- Phone side
 // Returns 'ok', 'no-location' or 'unavailable'.
@@ -75,6 +80,7 @@ export async function startSending(offer) {
   try {
     await p.startSending({ key: offer.key, port: offer.port, hosts: offer.hosts });
     sending = true;
+    confirmed = false;
     return 'ok';
   } catch (e) {
     console.warn('[beacon] send', e);
@@ -84,16 +90,35 @@ export async function startSending(offer) {
 
 export async function stopSending() {
   sending = false;
+  confirmed = false;
   try { await native()?.stopSending(); } catch { /* not sending */ }
 }
 
 export const beaconSending = () => sending;
+// Only once the screen has confirmed it receives the background link is it safe to lock
+// the phone; until then positions also go over the pairing link.
+export const beaconConfirmed = () => sending && confirmed;
+export function markConfirmed() {
+  if (sending) confirmed = true;
+}
+
+// The phone's own counters: {sending, fixes, sent, failed, lastError}.
+export async function sendStatus() {
+  try {
+    return (await native()?.isSending()) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export const platform = () => window.Capacitor?.getPlatform?.() ?? 'web';
 
 // The phone's notification has its own Stop button; this finds out if it was used.
 export async function refreshSending() {
   if (!sending) return false;
   try {
     sending = !!(await native()?.isSending())?.sending;
+    if (!sending) confirmed = false;
   } catch { /* keep what we had */ }
   return sending;
 }

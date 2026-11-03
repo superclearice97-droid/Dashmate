@@ -1,7 +1,7 @@
 // The navigation map (MapLibre + OpenFreeMap tiles from OpenStreetMap data).
 import { emit } from './bus.js';
 
-const STYLES = {
+export const STYLES = {
   light: 'https://tiles.openfreemap.org/styles/positron',
   dark: 'https://tiles.openfreemap.org/styles/dark',
 };

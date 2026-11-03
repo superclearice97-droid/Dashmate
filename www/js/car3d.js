@@ -187,9 +187,10 @@ export function createCar3d(canvas, { theme = 'light', color = '#eef0f3' } = {})
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
   const scene = new THREE.Scene();
   scene.fog = new THREE.Fog(0xffffff, 12, 78);
+  const EYE = { height: 5.4, back: 16, lookY: 2.2, lookZ: -14 };
   const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 400);
-  camera.position.set(0, 5.4, 16);
-  camera.lookAt(0, 2.2, -14);
+  camera.position.set(0, EYE.height, EYE.back);
+  camera.lookAt(0, EYE.lookY, EYE.lookZ);
 
   scene.add(new THREE.HemisphereLight(0xffffff, 0x8890a0, 1.5));
   const sun = new THREE.DirectionalLight(0xffffff, 1.5);
@@ -204,21 +205,24 @@ export function createCar3d(canvas, { theme = 'light', color = '#eef0f3' } = {})
     other: new THREE.MeshStandardMaterial({ roughness: 0.7 }),
     person: new THREE.MeshStandardMaterial({ roughness: 0.8 }),
   };
+  // The drawn road; hidden when the real streets are shown behind the car (streetview.js).
+  const roadParts = new THREE.Group();
+  scene.add(roadParts);
   const road = new THREE.Mesh(new THREE.PlaneGeometry(LANE * 5, 400), mats.road);
   road.rotation.x = -Math.PI / 2;
   road.position.z = -180;
-  scene.add(road);
+  roadParts.add(road);
   for (const x of [-2.5 * LANE, 2.5 * LANE]) {
     const edge = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.01, 400), mats.edge);
     edge.position.set(x, 0.01, -180);
-    scene.add(edge);
+    roadParts.add(edge);
   }
 
   const DASH = 8;
   const dashX = [-1.5 * LANE, -0.5 * LANE, 0.5 * LANE, 1.5 * LANE];
   const perLine = 30;
   const dashes = new THREE.InstancedMesh(new THREE.BoxGeometry(0.14, 0.01, 3), mats.line, dashX.length * perLine);
-  scene.add(dashes);
+  roadParts.add(dashes);
   const m4 = new THREE.Matrix4();
   let offset = 0;
   const placeDashes = () => {
@@ -335,6 +339,19 @@ export function createCar3d(canvas, { theme = 'light', color = '#eef0f3' } = {})
     setObjects,
     setTheme: applyTheme,
     setColor: (hex) => mats.paint.color.set(hex),
+    // Real streets behind the car: hide the drawn road and keep things visible farther away.
+    setStreets(on) {
+      roadParts.visible = !on;
+      scene.fog.near = on ? 40 : 12;
+      scene.fog.far = on ? 140 : 78;
+    },
+    // Where the camera is, so the street map behind can match it exactly.
+    camera: () => ({
+      fov: camera.fov,
+      height: EYE.height,
+      back: EYE.back,
+      pitch: 90 - (Math.atan2(EYE.height - EYE.lookY, EYE.back - EYE.lookZ) * 180) / Math.PI,
+    }),
     start() {
       if (running) return;
       running = true;

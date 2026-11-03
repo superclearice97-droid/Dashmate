@@ -33,6 +33,8 @@ public class DashLinkPlugin extends Plugin {
 
     private DatagramSocket receiver;
     private Thread receiverThread;
+    private volatile int received = 0;
+    private volatile int rejected = 0;
 
     // ------------------------------------------------------------------ phone side
     @PluginMethod
@@ -81,7 +83,13 @@ public class DashLinkPlugin extends Plugin {
 
     @PluginMethod
     public void isSending(PluginCall call) {
-        call.resolve(new JSObject().put("sending", BeaconService.running));
+        JSObject r = new JSObject();
+        r.put("sending", BeaconService.running);
+        r.put("fixes", BeaconService.fixes);
+        r.put("sent", BeaconService.sent);
+        r.put("failed", BeaconService.failed);
+        if (BeaconService.lastError != null) r.put("lastError", BeaconService.lastError);
+        call.resolve(r);
     }
 
     // ------------------------------------------------------------------ screen side
@@ -98,6 +106,8 @@ public class DashLinkPlugin extends Plugin {
             return;
         }
         closeReceiver();
+        received = 0;
+        rejected = 0;
         try {
             DatagramSocket s = new DatagramSocket(0);
             receiver = s;
@@ -114,6 +124,15 @@ public class DashLinkPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void listenStatus(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("listening", receiver != null);
+        r.put("received", received);
+        r.put("rejected", rejected);
+        call.resolve(r);
+    }
+
+    @PluginMethod
     public void stopListening(PluginCall call) {
         closeReceiver();
         call.resolve();
@@ -127,7 +146,11 @@ public class DashLinkPlugin extends Plugin {
                 DatagramPacket p = new DatagramPacket(buf, buf.length);
                 s.receive(p);
                 Object[] r = BeaconPacket.open(key, p.getData(), p.getLength());
-                if (r == null || !replay.accept((Long) r[0])) continue;
+                if (r == null || !replay.accept((Long) r[0])) {
+                    rejected++;
+                    continue;
+                }
+                received++;
                 notifyListeners("fix", JSObject.fromJSONObject(new JSONObject((String) r[1])));
             } catch (Exception e) {
                 if (s.isClosed()) return;

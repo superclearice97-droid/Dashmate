@@ -46,6 +46,11 @@ public class BeaconService extends Service implements LocationListener {
     private static final String TAG = "DashMateBeacon";
 
     static volatile boolean running = false;
+    // What happened, for the app's "is the screen receiving?" check.
+    static volatile int fixes = 0;
+    static volatile int sent = 0;
+    static volatile int failed = 0;
+    static volatile String lastError = null;
 
     private HandlerThread thread;
     private LocationManager locations;
@@ -83,13 +88,19 @@ public class BeaconService extends Service implements LocationListener {
             byte[] k = Base64.decode(intent.getStringExtra(EXTRA_KEY), Base64.NO_WRAP);
             int p = intent.getIntExtra(EXTRA_PORT, 0);
             ArrayList<String> hs = intent.getStringArrayListExtra(EXTRA_HOSTS);
-            if (k.length != 32 || p < 1 || p > 65535 || hs == null) return false;
+            if (k.length != 32 || p < 1 || p > 65535 || hs == null) {
+                lastError = "bad key, port or addresses";
+                return false;
+            }
             List<InetAddress> addrs = new ArrayList<>();
             for (String h : hs) {
                 byte[] b = BeaconPacket.privateIPv4(h);
                 if (b != null) addrs.add(InetAddress.getByAddress(b));
             }
-            if (addrs.isEmpty()) return false;
+            if (addrs.isEmpty()) {
+                lastError = "no local address for the screen";
+                return false;
+            }
             synchronized (hosts) {
                 hosts.clear();
                 hosts.addAll(addrs);
@@ -98,6 +109,10 @@ public class BeaconService extends Service implements LocationListener {
             port = p;
             // Counts up from the clock, so it keeps rising even if the service restarts.
             counter = System.currentTimeMillis() * 1000;
+            fixes = 0;
+            sent = 0;
+            failed = 0;
+            lastError = null;
             return true;
         } catch (Exception e) {
             return false;
@@ -107,6 +122,7 @@ public class BeaconService extends Service implements LocationListener {
     private boolean startUpdates() {
         if (thread != null) return true; // already reading GPS; new key/address applies
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            lastError = "precise location permission is off";
             return false;
         }
         try {
@@ -123,6 +139,7 @@ public class BeaconService extends Service implements LocationListener {
             return true;
         } catch (Exception e) {
             Log.w(TAG, "start", e);
+            lastError = "could not start: " + e;
             cleanUp();
             return false;
         }
@@ -136,7 +153,9 @@ public class BeaconService extends Service implements LocationListener {
                 l.hasSpeed() ? (double) l.getSpeed() : null,
                 l.hasBearing() ? (double) l.getBearing() : null,
                 l.getTime());
+            fixes++;
             byte[] packet = BeaconPacket.seal(key, ++counter, json);
+            boolean ok = false;
             List<InetAddress> targets;
             synchronized (hosts) {
                 targets = new ArrayList<>(hosts);
@@ -144,12 +163,17 @@ public class BeaconService extends Service implements LocationListener {
             for (InetAddress a : targets) {
                 try {
                     socket.send(new DatagramPacket(packet, packet.length, a, port));
+                    ok = true;
                 } catch (Exception e) {
                     // That address isn't reachable right now (e.g. hotspot off); keep trying the others.
+                    lastError = String.valueOf(e.getMessage());
                 }
             }
+            if (ok) sent++;
+            else failed++;
         } catch (Exception e) {
             Log.w(TAG, "send", e);
+            lastError = String.valueOf(e);
         }
     }
 

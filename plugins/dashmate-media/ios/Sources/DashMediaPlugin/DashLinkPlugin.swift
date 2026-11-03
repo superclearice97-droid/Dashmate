@@ -17,7 +17,8 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
         CAPPluginMethod(name: "stopSending", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "isSending", returnType: CAPPluginReturnPromise),
         CAPPluginMethod(name: "listen", returnType: CAPPluginReturnPromise),
-        CAPPluginMethod(name: "stopListening", returnType: CAPPluginReturnPromise)
+        CAPPluginMethod(name: "stopListening", returnType: CAPPluginReturnPromise),
+        CAPPluginMethod(name: "listenStatus", returnType: CAPPluginReturnPromise)
     ]
 
     // Phone side
@@ -27,10 +28,16 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
     private var sendPort: UInt16 = 0
     private var sendHosts: [in_addr] = []
     private var counter: UInt64 = 0
+    private var fixes = 0
+    private var sent = 0
+    private var failed = 0
+    private var lastError: String?
 
     // Screen side
     private var receiver: BeaconReceiver?
     private var lastCounter: UInt64 = 0
+    private var received = 0
+    private var rejected = 0
 
     private static func key(_ call: CAPPluginCall) -> SymmetricKey? {
         guard let b64 = call.getString("key"), let d = Data(base64Encoded: b64), d.count == 32 else { return nil }
@@ -56,6 +63,8 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
             self.sendPort = UInt16(port)
             self.sendHosts = hosts
             self.counter = UInt64(Date().timeIntervalSince1970 * 1000) * 1000
+            (self.fixes, self.sent, self.failed, self.lastError) = (0, 0, 0, nil)
+            for h in hosts { BeaconSender.askForLocalNetwork(h, UInt16(port)) }
             if self.manager == nil {
                 m.delegate = self
                 m.desiredAccuracy = kCLLocationAccuracyBest
@@ -83,7 +92,11 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
     }
 
     @objc func isSending(_ call: CAPPluginCall) {
-        DispatchQueue.main.async { call.resolve(["sending": self.manager != nil]) }
+        DispatchQueue.main.async {
+            var r: [String: Any] = ["sending": self.manager != nil, "fixes": self.fixes, "sent": self.sent, "failed": self.failed]
+            if let e = self.lastError { r["lastError"] = e }
+            call.resolve(r)
+        }
     }
 
     public func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
@@ -95,8 +108,13 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
             hdg: l.course >= 0 ? l.course : nil,
             t: Int64(l.timestamp.timeIntervalSince1970 * 1000))
         counter += 1
+        fixes += 1
         guard let packet = try? BeaconPacket.seal(key: key, counter: counter, json: json) else { return }
-        for h in sendHosts { sender.send(packet, to: h, port: sendPort) }
+        var ok = false
+        for h in sendHosts {
+            if let err = sender.send(packet, to: h, port: sendPort) { lastError = err } else { ok = true }
+        }
+        if ok { sent += 1 } else { failed += 1 }
     }
 
     public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -108,17 +126,27 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
         guard let key = DashLinkPlugin.key(call) else { call.reject("bad key"); return }
         receiver?.stop()
         lastCounter = 0
+        received = 0
+        rejected = 0
         let r = BeaconReceiver()
         let port = r.start { [weak self] data in
-            guard let self = self, let opened = BeaconPacket.open(key: key, packet: data),
-                  opened.0 > self.lastCounter,
-                  let obj = try? JSONSerialization.jsonObject(with: opened.1) as? [String: Any] else { return }
+            guard let self = self else { return }
+            guard let opened = BeaconPacket.open(key: key, packet: data), opened.0 > self.lastCounter,
+                  let obj = try? JSONSerialization.jsonObject(with: opened.1) as? [String: Any] else {
+                self.rejected += 1
+                return
+            }
             self.lastCounter = opened.0
+            self.received += 1
             self.notifyListeners("fix", data: obj)
         }
         guard let p = port else { call.reject("could not listen"); return }
         receiver = r
         call.resolve(["port": Int(p), "addrs": BeaconPacket.localAddresses()])
+    }
+
+    @objc func listenStatus(_ call: CAPPluginCall) {
+        call.resolve(["listening": receiver != nil, "received": received, "rejected": rejected])
     }
 
     @objc func stopListening(_ call: CAPPluginCall) {

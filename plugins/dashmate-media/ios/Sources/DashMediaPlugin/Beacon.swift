@@ -126,18 +126,40 @@ final class BeaconSender {
         fd = s
     }
 
-    func send(_ data: Data, to host: in_addr, port: UInt16) {
+    /// nil when sent, otherwise the system's reason (e.g. local network access not allowed).
+    @discardableResult
+    func send(_ data: Data, to host: in_addr, port: UInt16) -> String? {
+        var sa = BeaconSender.address(host, port)
+        let n = data.withUnsafeBytes { buf in
+            withUnsafePointer(to: &sa) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                    Darwin.sendto(fd, buf.baseAddress, buf.count, 0, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+                }
+            }
+        }
+        return n < 0 ? String(cString: strerror(errno)) : nil
+    }
+
+    static func address(_ host: in_addr, _ port: UInt16) -> sockaddr_in {
         var sa = sockaddr_in()
         sa.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         sa.sin_family = sa_family_t(AF_INET)
         sa.sin_port = port.bigEndian
         sa.sin_addr = host
-        data.withUnsafeBytes { buf in
-            _ = withUnsafePointer(to: &sa) {
-                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                    Darwin.sendto(fd, buf.baseAddress, buf.count, 0, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
-                }
-            }
+        return sa
+    }
+
+    /// Asks iOS for local network access now, while the phone is in your hand: connecting a
+    /// UDP socket to the screen shows the "find devices on your local network" alert without
+    /// sending anything (Apple TN3179). Without it, iOS silently blocks sends made later
+    /// from the background.
+    static func askForLocalNetwork(_ host: in_addr, _ port: UInt16) {
+        let s = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+        guard s >= 0 else { return }
+        defer { Darwin.close(s) }
+        var sa = address(host, port)
+        _ = withUnsafePointer(to: &sa) {
+            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.connect(s, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) }
         }
     }
 

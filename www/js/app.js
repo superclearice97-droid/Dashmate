@@ -23,7 +23,7 @@ import { startVision, stopVision, visionRunning } from './vision.js';
 import { startAsScreen, finishAsScreen, startAsPhone, closeLink, linkRole, sendBeaconOffer, sendBeaconAck, sendHello } from './link.js';
 import {
   listenForPhone, stopListening, hearingPhone, beaconListening, lastBeaconFix, beaconReceived, startSending, stopSending,
-  beaconSending, beaconConfirmed, markConfirmed, refreshSending, sendStatus, platform,
+  beaconSending, beaconConfirmed, markConfirmed, refreshSending, sendStatus, platform, pairing, forgetPair,
 } from './beacon.js';
 import { openCamera, closeCamera, loadScript } from './camera.js';
 import { qrSvg, scanQr } from './qr.js';
@@ -155,7 +155,7 @@ on('fix', (fix) => {
   renderGear();
   if (firstFix) applyTheme();
 
-  const q = gpsQuality(fix.source, fix.accuracy);
+  const q = gpsQuality(fix.source, fix.accuracy, pairing()?.role === 'screen' && !hearingPhone());
   $('#gps-chip').innerHTML = `<i class="dot" style="background:${{ good: '#22c55e', weak: '#f59e0b', poor: '#ef4444' }[q.level]}"></i>${q.label}`;
   $('#gps-chip').dataset.level = q.level;
 
@@ -681,7 +681,7 @@ function openPair() {
   if (!linkRole() && hearingPhone()) {
     openSheet(`${head('Paired')}<p>This screen is getting the phone’s GPS over the background link.</p>
       <div class="row-btns"><button class="btn danger" data-unpair>Disconnect</button></div>`, (card) => {
-      $('[data-unpair]', card).onclick = () => { stopListening(); closeSheet(); toast('Disconnected'); };
+      $('[data-unpair]', card).onclick = () => { forgetPair(); stopListening(); closeSheet(); toast('Disconnected'); };
     });
     return;
   }
@@ -693,7 +693,7 @@ function openPair() {
     openSheet(`${head('Paired')}<p>This device is connected as the <b>${role === 'phone' ? 'phone' : 'screen'}</b>.
       ${role === 'phone' ? 'It sends its GPS (and road reading, if the camera is on) to the screen.' : 'It shows the phone’s GPS and road reading.'}</p>${bg}
       <div class="row-btns"><button class="btn danger" data-unpair>Disconnect</button></div>`, (card) => {
-      $('[data-unpair]', card).onclick = () => { stopSharing(); stopListening(); closeSheet(); toast('Disconnected'); };
+      $('[data-unpair]', card).onclick = () => { forgetPair(); stopSharing(); stopListening(); closeSheet(); toast('Disconnected'); };
     });
     return;
   }
@@ -823,10 +823,10 @@ on('link', async (s) => {
       if (linkRole() === 'screen' && !peerVersion) toast(`Update DashMate on the phone to ${VERSION} so it can keep sending with its screen off.`, 8000);
     }, 6000);
   } else if (s.state === 'lost') {
-    // The background link carries on without the pairing link.
+    // The background link carries on without the pairing link, and reconnects by itself.
     if (s.role === 'phone' ? beaconConfirmed() : hearingPhone()) return;
     clearInterval(checkTimer);
-    toast('Pairing lost. Pair again to reconnect.');
+    if (!pairing()) toast('Pairing lost. Pair again to reconnect.');
   }
 });
 
@@ -864,6 +864,7 @@ on('beacon-ack', () => {
 });
 
 function stopSharing() {
+  forgetPair();
   clearInterval(checkTimer);
   if (beaconSending()) stopSending();
   closeLink();
@@ -900,6 +901,7 @@ function openSharingSheet(mode, detail = '') {
 document.addEventListener('visibilitychange', async () => {
   if (document.visibilityState !== 'visible' || !beaconSending()) return;
   if (!(await refreshSending())) {
+    forgetPair(); // stopped from the notification
     closeLink();
     setScreenAwake(true);
     toast('Stopped sharing GPS');
@@ -911,9 +913,23 @@ setInterval(() => {
   if (hearingPhone(15000)) quietWarned = false;
   else if (!quietWarned) {
     quietWarned = true;
-    toast('Not hearing from the phone. Check its hotspot is on, or pair again.');
+    toast('Not hearing from the phone. Open DashMate on the phone and check its hotspot is on. It reconnects by itself.', 6000);
   }
 }, 5000);
+
+// Already paired on an earlier drive: pick up where it left off, no codes needed. The screen
+// listens again; the phone starts sending again and finds the screen on its own hotspot.
+async function resumeLink() {
+  const saved = pairing();
+  if (!saved || !isNative()) return;
+  if (saved.role === 'screen') {
+    if (!(await listenForPhone(true))) toast('Couldn’t listen for your phone. Pair again from the pair button.', 6000);
+    return;
+  }
+  const r = await startSending({ key: saved.key, port: saved.port }, true);
+  if (r === 'ok') toast('Sharing this phone’s GPS with your screen');
+  else if (r === 'no-location') openSharingSheet('no-location');
+}
 
 // Tapping the GPS chip explains weak location (Wi-Fi-only iPads have no GPS chip).
 $('#gps-chip').addEventListener('click', () => {
@@ -938,7 +954,7 @@ function mediaControl(action) {
 }
 
 // ---------------------------------------------------------------- controls (settings)
-const VERSION = '0.12.0';
+const VERSION = '0.13.0';
 const TRIPS_KEY = 'dashmate.trips.v1';
 let tripLog;
 try { tripLog = new TripLog(JSON.parse(localStorage.getItem(TRIPS_KEY) || 'null')); } catch { tripLog = new TripLog(); }
@@ -1272,6 +1288,7 @@ async function boot() {
     initSystemMusic();
     initSpotify();
     startDeviceGps();
+    resumeLink();
     setScreenAwake(true);
     ready = true;
     if (pendingPairCode) {

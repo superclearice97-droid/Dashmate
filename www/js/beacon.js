@@ -7,7 +7,15 @@
 //     screen, encrypted and authenticated with that key (AES-256-GCM), only to private
 //     addresses on the local network (the hotspot).
 import { emit } from './bus.js';
-import { fixFromMessage, isPrivateIPv4 } from './core/gps.js';
+import { fixFromMessage, isPrivateIPv4, isFresh, BEACON_PORT, loadPairing, savePairing, forgetPairing } from './core/gps.js';
+
+// Pair once, then it reconnects by itself: the key and port are kept on this device, the
+// screen always listens on the same port and the phone finds it by sweeping its own
+// hotspot network, so a new IP address, a restart or the hotspot being switched off and
+// on needs no new pairing.
+const store = () => { try { return window.localStorage; } catch { return null; } };
+export const pairing = () => { const s = store(); return s ? loadPairing(s) : null; };
+export const forgetPair = () => { const s = store(); if (s) forgetPairing(s); };
 
 let plugin = null;
 function native() {
@@ -30,27 +38,33 @@ function randomKey() {
 
 // ---- Screen side
 // Returns the offer to send to the phone, or null when background sending isn't possible.
-export async function listenForPhone() {
+// With `resume`, listens again with the remembered key (no pairing code needed); otherwise
+// makes a fresh key for a new pairing.
+export async function listenForPhone(resume = false) {
   const p = native();
   if (!p) return null;
-  const k = randomKey();
+  const saved = pairing();
+  if (resume && saved?.role !== 'screen') return null;
+  const k = resume ? saved.key : randomKey();
   try {
     await stopListening();
     fixHandle = await p.addListener('fix', (m) => {
       const f = fixFromMessage(m);
-      if (!f) return;
+      if (!f || !isFresh(m.t)) return; // a replayed old packet
       lastFix = Date.now();
       received++;
       emit('remote-fix', f);
     });
-    const r = await p.listen({ key: k });
+    const r = await p.listen({ key: k, port: BEACON_PORT });
     const a = (r?.addrs || []).filter(isPrivateIPv4).slice(0, 8);
-    if (!a.length || !Number.isInteger(r.port)) {
+    if (!Number.isInteger(r?.port)) {
       await stopListening();
       return null;
     }
     listening = true;
     received = 0;
+    const s = store();
+    if (s) savePairing(s, { role: 'screen', key: k, port: r.port });
     return { t: 'beacon', k, p: r.port, a };
   } catch (e) {
     console.warn('[beacon] listen', e);
@@ -73,14 +87,17 @@ export const lastBeaconFix = () => lastFix;
 export const beaconReceived = () => received;
 
 // ---- Phone side
-// Returns 'ok', 'no-location' or 'unavailable'.
-export async function startSending(offer) {
+// Returns 'ok', 'no-location' or 'unavailable'. `offer` is {key, port, hosts?}: from a
+// new pairing, or the remembered one (then it is already known to work).
+export async function startSending(offer, resumed = false) {
   const p = native();
   if (!p) return 'unavailable';
   try {
-    await p.startSending({ key: offer.key, port: offer.port, hosts: offer.hosts });
+    await p.startSending({ key: offer.key, port: offer.port, hosts: offer.hosts || [] });
     sending = true;
-    confirmed = false;
+    confirmed = resumed;
+    const s = store();
+    if (s) savePairing(s, { role: 'phone', key: offer.key, port: offer.port });
     return 'ok';
   } catch (e) {
     console.warn('[beacon] send', e);

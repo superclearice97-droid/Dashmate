@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.0 — 2026-11-05
+
+- **Pair once; it reconnects by itself.** Until now every drive needed both QR codes, and anything that interrupted the link (the iPad app being restarted, the hotspot switching off and on, the iPad getting a new address) left the phone sending to an address nobody was listening on, with nothing to recover it. Now:
+  - The pairing (key and a fixed port) is remembered on both devices. Open DashMate on each and it connects: the screen listens again, the phone starts sharing again. Disconnect / Stop sharing forgets it.
+  - The phone no longer depends on the iPad's address. It sends to every address on its own hotspot network (at most 254, hotspot interfaces only, never mobile data or other Wi-Fi). Only the iPad has the key, so everything else ignores the packets.
+  - A packet older than a minute is ignored, so a recorded packet can't be replayed now that the key lasts.
+- A screen that is paired to a phone says **Waiting for phone** while it isn't hearing it, instead of showing its own rough Wi-Fi guess as "GPS". The old "Pairing lost" message no longer appears when the link reconnects by itself.
+- Privacy policy (and its in-app copy) describes the remembered pairing and the hotspot sweep.
+- Tests: pairing storage, freshness, the waiting status, and the hotspot sweep and interface rules (Java). Browser-checked with the native parts simulated. **Experimental**: the Android and iOS code is not yet tried on real phones, and there is no Swift compiler here, so the iOS part is only checked by the build.
+
 ## 0.12.0 — 2026-11-03
 
 - **Fix: the paired phone losing the iPad when its screen turns off.** Two causes:

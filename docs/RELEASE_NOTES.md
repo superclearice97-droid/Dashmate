@@ -1,5 +1,9 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.13.0
+- **Pair once, then it just reconnects.** After pairing, open DashMate on the phone and the iPad and they find each other, even if the iPad restarted, the hotspot was switched off and on, or the iPad got a new address. No more QR codes each drive. Install 0.13.0 on **both** devices and pair one last time. The phone keeps sharing with its screen off (**experimental**: not yet tried on real phones)
+- The iPad says **Waiting for phone** instead of showing its own rough Wi-Fi location as "GPS"
+
 ### New in 0.12.0
 - **Fix for the phone losing the iPad when its screen turns off.** Install 0.12.0 on **both** devices and pair again. On iPhone, tap **Allow** when asked about the local network. Keep DashMate open on the phone until it says **✓ Your screen is receiving it. You can lock this phone**; if something is blocking it, the phone now tells you what and how to fix it (**experimental**: checked in a browser with the phone parts simulated, not yet on real phones)
 

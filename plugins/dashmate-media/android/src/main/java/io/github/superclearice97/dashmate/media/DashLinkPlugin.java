@@ -44,13 +44,14 @@ public class DashLinkPlugin extends Plugin {
         JSArray hostArray = call.getArray("hosts");
         ArrayList<String> hosts = new ArrayList<>();
         try {
-            for (Object h : hostArray.toList()) if (h instanceof String) hosts.add((String) h);
+            // Optional: the phone also finds the screen by sweeping its own hotspot network.
+            if (hostArray != null) for (Object h : hostArray.toList()) if (h instanceof String) hosts.add((String) h);
         } catch (Exception e) {
             call.reject("bad hosts");
             return;
         }
-        if (key == null || port == null || hosts.isEmpty()) {
-            call.reject("missing key, port or hosts");
+        if (key == null || port == null) {
+            call.reject("missing key or port");
             return;
         }
         if (ContextCompat.checkSelfPermission(getContext(), Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -109,7 +110,11 @@ public class DashLinkPlugin extends Plugin {
         received = 0;
         rejected = 0;
         try {
-            DatagramSocket s = new DatagramSocket(0);
+            // A fixed port, so the phone can find this screen again with no new pairing.
+            int want = call.getInt("port", 0);
+            DatagramSocket s = new DatagramSocket(null);
+            s.setReuseAddress(true);
+            s.bind(new java.net.InetSocketAddress(want));
             receiver = s;
             final byte[] k = key;
             receiverThread = new Thread(() -> receiveLoop(s, k), "DashMateReceiver");

@@ -96,6 +96,35 @@ public final class BeaconPacket {
         return ok ? b : null;
     }
 
+    /**
+     * Hotspot interfaces only (not the mobile data or home Wi-Fi connection): Android's
+     * tethering/hotspot interfaces and USB/Bluetooth tethering. The phone is the hotspot,
+     * so the screen is always one of the other addresses on this network.
+     */
+    public static boolean isHotspotInterface(String name) {
+        return name != null && name.matches("(ap|swlan|softap|wlan[1-9]|rndis|bt-pan|eth)\\d*");
+    }
+
+    /**
+     * Every other host address on the phone's own /24 (or smaller) network, so the phone
+     * finds the screen without knowing its address, even after the hotspot hands it a
+     * new one. Only the screen holds the key; everything else just ignores the packet.
+     */
+    public static java.util.List<byte[]> sweepHosts(byte[] self, int prefix) {
+        java.util.List<byte[]> out = new java.util.ArrayList<>();
+        if (self == null || self.length != 4 || privateIPv4(String.format("%d.%d.%d.%d",
+            self[0] & 255, self[1] & 255, self[2] & 255, self[3] & 255)) == null) return out;
+        int p = Math.max(24, Math.min(prefix, 30)); // never sweep more than 254 addresses
+        int host = self[3] & 255;
+        int size = 1 << (32 - p);
+        int base = host & ~(size - 1);
+        for (int h = base + 1; h < base + size - 1; h++) {
+            if (h == host) continue;
+            out.add(new byte[] { self[0], self[1], self[2], (byte) h });
+        }
+        return out;
+    }
+
     /** Accepts only counters newer than any seen before (per pairing). */
     public static final class Replay {
         private long last = Long.MIN_VALUE;

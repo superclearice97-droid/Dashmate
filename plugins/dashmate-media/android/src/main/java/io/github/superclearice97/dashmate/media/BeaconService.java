@@ -25,7 +25,11 @@ import androidx.core.app.ServiceCompat;
 import androidx.core.content.ContextCompat;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.Inet4Address;
 import java.net.InetAddress;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
+import java.util.Collections;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,6 +64,8 @@ public class BeaconService extends Service implements LocationListener {
     private int port;
     private final List<InetAddress> hosts = new ArrayList<>();
     private long counter;
+    private List<InetAddress> sweep;
+    private long sweptAt;
 
     @Override
     public IBinder onBind(Intent intent) {
@@ -88,18 +94,17 @@ public class BeaconService extends Service implements LocationListener {
             byte[] k = Base64.decode(intent.getStringExtra(EXTRA_KEY), Base64.NO_WRAP);
             int p = intent.getIntExtra(EXTRA_PORT, 0);
             ArrayList<String> hs = intent.getStringArrayListExtra(EXTRA_HOSTS);
-            if (k.length != 32 || p < 1 || p > 65535 || hs == null) {
-                lastError = "bad key, port or addresses";
+            if (k.length != 32 || p < 1 || p > 65535) {
+                lastError = "bad key or port";
                 return false;
             }
+            // Addresses are only hints now: the phone also sweeps its own hotspot network.
             List<InetAddress> addrs = new ArrayList<>();
-            for (String h : hs) {
-                byte[] b = BeaconPacket.privateIPv4(h);
-                if (b != null) addrs.add(InetAddress.getByAddress(b));
-            }
-            if (addrs.isEmpty()) {
-                lastError = "no local address for the screen";
-                return false;
+            if (hs != null) {
+                for (String h : hs) {
+                    byte[] b = BeaconPacket.privateIPv4(h);
+                    if (b != null) addrs.add(InetAddress.getByAddress(b));
+                }
             }
             synchronized (hosts) {
                 hosts.clear();
@@ -156,11 +161,7 @@ public class BeaconService extends Service implements LocationListener {
             fixes++;
             byte[] packet = BeaconPacket.seal(key, ++counter, json);
             boolean ok = false;
-            List<InetAddress> targets;
-            synchronized (hosts) {
-                targets = new ArrayList<>(hosts);
-            }
-            for (InetAddress a : targets) {
+            for (InetAddress a : targets()) {
                 try {
                     socket.send(new DatagramPacket(packet, packet.length, a, port));
                     ok = true;
@@ -175,6 +176,40 @@ public class BeaconService extends Service implements LocationListener {
             Log.w(TAG, "send", e);
             lastError = String.valueOf(e);
         }
+    }
+
+    /**
+     * Where to send: the screen's addresses from pairing, plus every other address on the
+     * hotspot network this phone is hosting (re-read every few seconds, since the hotspot
+     * can be switched off and on). This is what lets the screen be found again with a new
+     * address, or after an app restart, with no new pairing.
+     */
+    private List<InetAddress> targets() {
+        long now = System.currentTimeMillis();
+        if (sweep == null || now - sweptAt > 5000) {
+            List<InetAddress> found = new ArrayList<>();
+            try {
+                for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
+                    if (!ni.isUp() || !BeaconPacket.isHotspotInterface(ni.getName())) continue;
+                    for (InterfaceAddress ia : ni.getInterfaceAddresses()) {
+                        if (!(ia.getAddress() instanceof Inet4Address)) continue;
+                        for (byte[] h : BeaconPacket.sweepHosts(ia.getAddress().getAddress(), ia.getNetworkPrefixLength())) {
+                            found.add(InetAddress.getByAddress(h));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "interfaces", e);
+            }
+            sweep = found;
+            sweptAt = now;
+        }
+        List<InetAddress> all;
+        synchronized (hosts) {
+            all = new ArrayList<>(hosts);
+        }
+        for (InetAddress a : sweep) if (!all.contains(a)) all.add(a);
+        return all;
     }
 
     @Override public void onStatusChanged(String provider, int status, Bundle extras) {}

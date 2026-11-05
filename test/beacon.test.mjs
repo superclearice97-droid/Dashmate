@@ -74,3 +74,15 @@ test('beacon: only sends to private IPv4 literals, never host names or public ad
   };
   assert.equal(java('ip', ...Object.keys(cases)), Object.values(cases).join(''));
 });
+
+test('beacon: the phone sweeps its own hotspot network, never more than 254 addresses', { skip: !out && 'no javac' }, () => {
+  assert.equal(java('sweep', '192.168.43.1', '24'), '253 2 254'); // Android hotspot, all but itself
+  assert.equal(java('sweep', '172.20.10.1', '28'), '13 2 14'); // iPhone hotspot (a /28)
+  assert.equal(java('sweep', '10.5.4.9', '8'), '253 1 254', 'a huge network is limited to its /24');
+  assert.equal(java('sweep', '8.8.8.8', '24'), '0', 'public addresses are never swept');
+});
+
+test('beacon: only hotspot interfaces are swept, not mobile data or the home Wi-Fi', { skip: !out && 'no javac' }, () => {
+  const cases = { ap0: 'y', swlan0: 'y', wlan1: 'y', rndis0: 'y', 'bt-pan': 'y', wlan0: 'n', rmnet_data0: 'n', ccmni0: 'n', lo: 'n', dummy0: 'n' };
+  assert.equal(java('iface', ...Object.keys(cases)), Object.values(cases).join(''));
+});

@@ -75,19 +75,54 @@ enum BeaconPacket {
     }
 }
 
+extension BeaconPacket {
+    /// Every other host address on the hotspot network this iPhone is hosting (iOS names it
+    /// "bridge100"), at most a /24, so the phone finds the screen without knowing its
+    /// address, even after the hotspot gives it a new one. Only the screen holds the key.
+    static func sweepHosts() -> [in_addr] {
+        var out: [in_addr] = []
+        var ifap: UnsafeMutablePointer<ifaddrs>?
+        guard getifaddrs(&ifap) == 0, let first = ifap else { return out }
+        defer { freeifaddrs(ifap) }
+        for ptr in sequence(first: first, next: { $0.pointee.ifa_next }) {
+            let flags = Int32(ptr.pointee.ifa_flags)
+            guard flags & IFF_UP != 0, String(cString: ptr.pointee.ifa_name).hasPrefix("bridge"),
+                  let sa = ptr.pointee.ifa_addr, sa.pointee.sa_family == UInt8(AF_INET),
+                  let mask = ptr.pointee.ifa_netmask else { continue }
+            let selfAddr = sa.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { UInt32(bigEndian: $0.pointee.sin_addr.s_addr) }
+            let netmask = mask.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { UInt32(bigEndian: $0.pointee.sin_addr.s_addr) }
+            guard privateIPv4(ipString(selfAddr)) != nil else { continue }
+            let effective = max(netmask, 0xFFFF_FF00) // a longer prefix is a bigger mask; never wider than a /24
+            let net = selfAddr & effective
+            let size = ~effective // number of host bits as a mask
+            guard size >= 3, size <= 255 else { continue }
+            for h in 1..<size where net | h != selfAddr {
+                out.append(in_addr(s_addr: (net | h).bigEndian))
+            }
+        }
+        return out
+    }
+
+    private static func ipString(_ a: UInt32) -> String {
+        "\(a >> 24).\((a >> 16) & 255).\((a >> 8) & 255).\(a & 255)"
+    }
+}
+
 /// Receives packets on a UDP port (screen side).
 final class BeaconReceiver {
     private var source: DispatchSourceRead?
     private let queue = DispatchQueue(label: "dashmate.beacon.receive")
 
-    /// Opens a port chosen by the system and returns it.
-    func start(onPacket: @escaping (Data) -> Void) -> UInt16? {
+    /// Opens the given port (0 = chosen by the system) and returns the port in use.
+    func start(port: UInt16, onPacket: @escaping (Data) -> Void) -> UInt16? {
         let fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
         guard fd >= 0 else { return nil }
+        var reuse: Int32 = 1
+        setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuse, socklen_t(MemoryLayout<Int32>.size))
         var addr = sockaddr_in()
         addr.sin_len = UInt8(MemoryLayout<sockaddr_in>.size)
         addr.sin_family = sa_family_t(AF_INET)
-        addr.sin_port = 0
+        addr.sin_port = port.bigEndian
         addr.sin_addr = in_addr(s_addr: INADDR_ANY)
         let bound = withUnsafePointer(to: &addr) {
             $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { Darwin.bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size)) }

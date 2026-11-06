@@ -76,6 +76,33 @@ export function gpsQuality(source, accuracy, waitingForPhone = false) {
   return { label: `GPS · ${where}`, level: 'good' };
 }
 
+// No position for a few seconds means the speed on screen is a memory, not a reading.
+export const STALE_MS = 4000;
+export const gpsStale = (ageMs, source) => source !== 'demo' && ageMs > STALE_MS;
+
+// A rough Wi-Fi guess (hundreds of metres out) must not drive the car or the speed while
+// a phone is paired as the GPS; it jumps around and makes up speeds.
+export const ignoreWifiGuess = (accuracy, expectPhone) => !!expectPhone && accuracy > 100;
+
+// What the phone did while its screen was off, from its own counters taken just before
+// it was locked and just after it was opened ({fixes, sent, failed, lastError}).
+export function lockReport(before, after, seconds, platform) {
+  if (!before || !after || seconds < 10) return null;
+  const d = (k) => (after[k] || 0) - (before[k] || 0);
+  const why = after.lastError ? ` (${String(after.lastError).slice(0, 80)})` : '';
+  if (d('fixes') <= 0) {
+    return { ok: false, text: platform === 'ios'
+      ? `While locked for ${Math.round(seconds)} s this iPhone got no GPS positions, so there was nothing to send. Open Settings › DashMate › Location, choose Always, and make sure Precise Location is on.`
+      : `While locked for ${Math.round(seconds)} s this phone got no GPS positions, so there was nothing to send. In Settings › Apps › DashMate › Battery, choose Unrestricted, and make sure Location is allowed all the time.` };
+  }
+  if (d('sent') <= 0) {
+    return { ok: false, text: platform === 'ios'
+      ? `While locked for ${Math.round(seconds)} s this iPhone had GPS but iOS blocked sending to your iPad${why}. Turn on Settings › Privacy & Security › Local Network › DashMate.`
+      : `While locked for ${Math.round(seconds)} s this phone had GPS but couldn’t send to your screen${why}. Check the hotspot stayed on.` };
+  }
+  return { ok: true, text: `While locked for ${Math.round(seconds)} s this phone kept sending (${d('sent')} positions). If the screen still lost it, the problem is on the screen or the hotspot, not this phone.` };
+}
+
 // The phone's own record of the background link ({sending, fixes, sent, failed, lastError}
 // from the native plugin) -> what to tell the user while the screen hasn't confirmed it's
 // receiving. {waiting: true} means "give it a moment"; otherwise `text` says what's wrong.

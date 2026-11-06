@@ -7,7 +7,7 @@ import { TripTracker } from './core/trip.js';
 import { NavRoute } from './core/route.js';
 import { SpeedWatcher, GreenLightWatcher, warningEffects } from './core/alerts.js';
 import { TripLog } from './core/trips.js';
-import { gpsQuality, linkProblem, sameVersion } from './core/gps.js';
+import { gpsQuality, gpsStale, lockReport, linkProblem, sameVersion } from './core/gps.js';
 import { initControls, openControls, closeControls, refreshControls, seg, bindFields, onlineFields } from './controls.js';
 import { isDaytime } from './core/sun.js';
 import { toScene, guessGear } from './core/scene.js';
@@ -143,6 +143,18 @@ function renderGear() {
 }
 
 // ---------------------------------------------------------------- position updates
+// With no new position, the speed on screen would just be the last one remembered. Show
+// a dash instead, and say why.
+let lastFixAt = 0;
+setInterval(() => {
+  if (!lastFix || !gpsStale(Date.now() - lastFixAt, lastFix.source)) return;
+  $('#speed').textContent = '–';
+  car3d?.setSpeed(0);
+  const waiting = pairing()?.role === 'screen';
+  $('#gps-chip').innerHTML = `<i class="dot" style="background:#ef4444"></i>${waiting ? 'Waiting for phone' : 'No GPS signal'}`;
+  $('#gps-chip').dataset.level = 'poor';
+}, 1000);
+
 on('fix', (fix) => {
   snap = trip.update(fix);
   const pos = snap.pos;
@@ -150,6 +162,7 @@ on('fix', (fix) => {
 
   const firstFix = !lastFix;
   lastFix = fix;
+  lastFixAt = Date.now();
   if (snap.speed > 0.5) lastMovingAt = Date.now();
   $('#speed').textContent = speedValue(snap.speed, units);
   renderGear();
@@ -898,7 +911,28 @@ function openSharingSheet(mode, detail = '') {
 
 // Back in DashMate: notice if sharing was stopped from the notification, and on the
 // screen, warn once if the phone has gone quiet.
+// While the phone is locked its web code is paused, so the sending counters are read just
+// before it locks and again when it is opened; the difference says what the phone did.
+let lastStatus = null;
+let lockedAt = null;
+setInterval(async () => {
+  if (beaconSending() && document.visibilityState === 'visible') lastStatus = await sendStatus();
+}, 2000);
 document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'hidden') {
+    if (beaconSending()) {
+      lockedAt = { status: lastStatus, at: Date.now() };
+      sendStatus().then((st) => { if (st && lockedAt) lockedAt.status = st; });
+    }
+    return;
+  }
+  if (document.visibilityState === 'visible' && lockedAt && beaconSending()) {
+    const before = lockedAt;
+    lockedAt = null;
+    const r = lockReport(before.status, await sendStatus(), (Date.now() - before.at) / 1000, platform());
+    if (r && r.ok) toast(r.text, 8000);
+    else if (r) openSheet(`${head('Why the screen lost this phone')}<p>${esc(r.text)}</p><div class="row-btns"><button class="btn" data-close>OK</button></div>`);
+  }
   if (document.visibilityState !== 'visible' || !beaconSending()) return;
   if (!(await refreshSending())) {
     forgetPair(); // stopped from the notification
@@ -908,10 +942,15 @@ document.addEventListener('visibilitychange', async () => {
   }
 });
 let quietWarned = false;
+let quietSince = 0;
 setInterval(() => {
   if (!beaconListening() || !lastBeaconFix()) return;
-  if (hearingPhone(15000)) quietWarned = false;
-  else if (!quietWarned) {
+  if (hearingPhone(15000)) {
+    if (quietSince) toast(`The phone is back after ${Math.round((Date.now() - quietSince) / 1000)} s.`, 5000);
+    quietSince = 0;
+    quietWarned = false;
+  } else if (!quietWarned) {
+    quietSince = lastBeaconFix();
     quietWarned = true;
     toast('Not hearing from the phone. Open DashMate on the phone and check its hotspot is on. It reconnects by itself.', 6000);
   }
@@ -954,7 +993,7 @@ function mediaControl(action) {
 }
 
 // ---------------------------------------------------------------- controls (settings)
-const VERSION = '0.13.0';
+const VERSION = '0.13.1';
 const TRIPS_KEY = 'dashmate.trips.v1';
 let tripLog;
 try { tripLog = new TripLog(JSON.parse(localStorage.getItem(TRIPS_KEY) || 'null')); } catch { tripLog = new TripLog(); }

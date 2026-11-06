@@ -6,6 +6,8 @@ import { emit, on } from './bus.js';
 import { cumulative, pointAt, distance } from './core/geo.js';
 import { boxFor } from './core/scene.js';
 import { countKinds } from './core/vision-math.js';
+import { ignoreWifiGuess } from './core/gps.js';
+import { pairing } from './beacon.js';
 
 const REMOTE_FRESH_MS = 5000;
 let watchId = null;
@@ -22,6 +24,7 @@ export function startDeviceGps() {
   watchId = navigator.geolocation.watchPosition(
     (p) => {
       if (demoTimer || Date.now() - lastRemote < REMOTE_FRESH_MS) return; // phone or demo wins
+      if (ignoreWifiGuess(p.coords.accuracy, pairing()?.role === 'screen')) return; // rough guess: wait for the phone
       source = 'device';
       emit('fix', {
         lon: p.coords.longitude, lat: p.coords.latitude, accuracy: p.coords.accuracy,

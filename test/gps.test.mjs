@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fixFromMessage, isPrivateIPv4, beaconOffer, gpsQuality, isFresh, loadPairing, savePairing, forgetPairing, BEACON_PORT } from '../www/js/core/gps.js';
+import { fixFromMessage, isPrivateIPv4, beaconOffer, gpsQuality, isFresh, gpsStale, ignoreWifiGuess, lockReport, loadPairing, savePairing, forgetPairing, BEACON_PORT } from '../www/js/core/gps.js';
 
 test('positions from the phone are checked before use', () => {
   assert.deepEqual(fixFromMessage({ lat: 41.9, lon: -87.6, acc: 5, spd: 12.5, hdg: 90, t: 1 }),
@@ -82,4 +82,30 @@ test('a screen paired to a phone says it is waiting instead of showing its own g
   assert.equal(gpsQuality('device', 900, true).label, 'Waiting for phone');
   assert.equal(gpsQuality('device', 900, false).label, 'Wi-Fi location only');
   assert.equal(gpsQuality('phone', 5, true).label, 'GPS · Phone');
+});
+
+test('speed is a reading only while positions are arriving', () => {
+  assert.ok(!gpsStale(1500, 'phone'));
+  assert.ok(gpsStale(9000, 'phone'));
+  assert.ok(!gpsStale(60000, 'demo'), 'the demo drive is never stale');
+});
+
+test('a rough Wi-Fi guess is ignored while a phone is paired', () => {
+  assert.ok(ignoreWifiGuess(900, true));
+  assert.ok(!ignoreWifiGuess(900, false), 'unpaired iPads still show their own guess');
+  assert.ok(!ignoreWifiGuess(8, true), 'a real GPS fix is always used');
+});
+
+test('after a lock, the phone says what happened from its own counters', () => {
+  const b = { fixes: 100, sent: 100, failed: 0 };
+  assert.equal(lockReport(b, { fixes: 100, sent: 100, failed: 0 }, 60, 'ios').ok, false);
+  assert.match(lockReport(b, { fixes: 100, sent: 100, failed: 0 }, 60, 'ios').text, /no GPS positions.*Always/);
+  assert.match(lockReport(b, { fixes: 100, sent: 100, failed: 0 }, 60, 'android').text, /Unrestricted/);
+  assert.match(lockReport(b, { fixes: 150, sent: 100, failed: 50, lastError: 'No route to host' }, 60, 'ios').text, /Local Network.*|blocked sending/);
+  assert.match(lockReport(b, { fixes: 150, sent: 100, failed: 50 }, 60, 'android').text, /couldn’t send/);
+  const ok = lockReport(b, { fixes: 160, sent: 160, failed: 0 }, 60, 'ios');
+  assert.ok(ok.ok);
+  assert.match(ok.text, /60 positions/);
+  assert.equal(lockReport(b, b, 5, 'ios'), null, 'a short lock says nothing');
+  assert.equal(lockReport(null, b, 60, 'ios'), null);
 });

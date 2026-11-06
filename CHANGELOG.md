@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.13.1 — 2026-11-06
+
+Owner's report on 0.13.0: the iPad still loses the phone when the phone's screen is off (it comes back when the phone is unlocked), and the speedometer is wrong.
+
+- **Speedometer:** with no new position the speed stayed at the last value forever (a stale "62"). After 4 seconds without a position it now shows "–" and the chip says **Waiting for phone** (or **No GPS signal** if no phone is paired). While a phone is paired, the iPad also ignores its own rough Wi-Fi location instead of letting it jump the car around and invent speeds.
+- **The phone now tells you why, by itself.** It reads its own sending counters just before it locks and again when you open it. If it was locked for 10 seconds or more, it says which of three things happened: it got no GPS while locked (and what to change: Location "Always" on iPhone, battery "Unrestricted" on Android), it had GPS but couldn't send (iPhone Local Network switch, or the hotspot), or it kept sending (so the problem is on the screen or hotspot side). This is a diagnosis, not yet a fix for the screen-off problem: the cause is still unknown.
+- **The iPad says when the phone is back and how long it was gone.**
+- **Finding the screen is no longer limited to guessed interface names.** Phones name their hotspot differently (ap0, swlan0, ap_br_wlan2…), and 0.13.0 only recognised some. The phone now looks on every local network it is on except mobile data, VPNs and tunnels (and on iPhone the hotspot it hosts or the Wi-Fi it has joined). Still only private addresses, at most 254 per network, encrypted.
+- Privacy policy updated for that. Tests added for stale speed, the Wi-Fi-guess rule, the lock report and the interface rules.
+
 ## 0.13.0 — 2026-11-05
 
 - **Pair once; it reconnects by itself.** Until now every drive needed both QR codes, and anything that interrupted the link (the iPad app being restarted, the hotspot switching off and on, the iPad getting a new address) left the phone sending to an address nobody was listening on, with nothing to recover it. Now:

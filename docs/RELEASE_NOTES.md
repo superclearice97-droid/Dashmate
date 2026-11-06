@@ -1,5 +1,10 @@
 **Downloads:** `DashMate.apk` for Android · `DashMate.ipa` for iPad/iPhone (sideload with SideStore or iloader; see [docs/INSTALL.md](https://github.com/superclearice97-droid/DashMate/blob/main/docs/INSTALL.md)).
 
+### New in 0.13.1
+- **Speedometer fix:** it no longer holds the last speed when positions stop; it shows "–" and **Waiting for phone**. While a phone is paired the iPad ignores its own rough Wi-Fi location
+- **If the iPad still loses the phone when it's locked, the phone now tells you why** the next time you open it (no GPS while locked, blocked from sending, or it kept sending), and what to change. Install 0.13.1 on **both** devices (**experimental**: this finds the cause; it doesn't fix the screen-off problem yet)
+- The iPad says when the phone is back and how long it was gone
+
 ### New in 0.13.0
 - **Pair once, then it just reconnects.** After pairing, open DashMate on the phone and the iPad and they find each other, even if the iPad restarted, the hotspot was switched off and on, or the iPad got a new address. No more QR codes each drive. Install 0.13.0 on **both** devices and pair one last time. The phone keeps sharing with its screen off (**experimental**: not yet tried on real phones)
 - The iPad says **Waiting for phone** instead of showing its own rough Wi-Fi location as "GPS"

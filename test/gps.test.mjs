@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { fixFromMessage, isPrivateIPv4, beaconOffer, gpsQuality } from '../www/js/core/gps.js';
+import { fixFromMessage, isPrivateIPv4, beaconOffer, gpsQuality, isFresh, loadPairing, savePairing, forgetPairing, BEACON_PORT } from '../www/js/core/gps.js';
 
 test('positions from the phone are checked before use', () => {
   assert.deepEqual(fixFromMessage({ lat: 41.9, lon: -87.6, acc: 5, spd: 12.5, hdg: 90, t: 1 }),
@@ -52,4 +52,34 @@ test('background link check explains what is wrong', () => {
   assert.match(linkProblem({ sending: true, fixes: 5, sent: 0, failed: 5, lastError: 'Network is unreachable' }, 'android').text, /hotspot/);
   assert.match(linkProblem({ sending: true, fixes: 8, sent: 8, failed: 0 }, 'android').text, /isn’t receiving/);
   assert.match(linkProblem(null, 'ios').text, /didn’t start/);
+});
+
+test('replayed old packets are dropped, recent and untimed ones pass', () => {
+  const now = 1_700_000_000_000;
+  assert.ok(isFresh(now - 2000, now));
+  assert.ok(isFresh(now + 5000, now), 'small clock difference');
+  assert.ok(!isFresh(now - 3_600_000, now), 'an hour old');
+  assert.ok(isFresh(undefined, now));
+});
+
+test('pairing is remembered on the device and validated when read back', () => {
+  const mem = new Map();
+  const storage = { getItem: (k) => mem.get(k) ?? null, setItem: (k, v) => mem.set(k, v), removeItem: (k) => mem.delete(k) };
+  const key = Buffer.alloc(32, 9).toString('base64');
+  assert.equal(loadPairing(storage), null);
+  savePairing(storage, { role: 'phone', key, port: BEACON_PORT });
+  assert.deepEqual(loadPairing(storage), { role: 'phone', key, port: BEACON_PORT });
+  forgetPairing(storage);
+  assert.equal(loadPairing(storage), null);
+  for (const bad of ['{', '{"role":"x"}', JSON.stringify({ role: 'phone', key: 'short', port: 1 }), JSON.stringify({ role: 'phone', key, port: 0 })]) {
+    mem.set('dashmate.pairing', bad);
+    assert.equal(loadPairing(storage), null, bad);
+  }
+  assert.equal(loadPairing({ getItem() { throw new Error('blocked'); } }), null);
+});
+
+test('a screen paired to a phone says it is waiting instead of showing its own guess', () => {
+  assert.equal(gpsQuality('device', 900, true).label, 'Waiting for phone');
+  assert.equal(gpsQuality('device', 900, false).label, 'Wi-Fi location only');
+  assert.equal(gpsQuality('phone', 5, true).label, 'GPS · Phone');
 });

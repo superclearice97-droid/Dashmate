@@ -6,6 +6,8 @@ Read README.md for the feature list and CHANGELOG.md for the history. This file 
 
 ## The open problem (start here)
 
+**Update (0.13.0, 2026-11-05):** the owner sent a video of the iPad driving at 62 mph with the chip on "Wi-Fi location only" (the iPad's own guess, so the phone link wasn't feeding it) and said the app "does not work at all how it is intended" and that they shouldn't have to plug the phone in for us to fix it. Root causes found in the 0.12.0 design: pairing was in-memory only (new key and random port each time, a full two-QR pairing every drive), and the phone sent only to the iPad's IPs from pairing time, so any address change or restart broke it with no recovery. 0.13.0 fixes that: pairing is stored (`beacon.js`/`core/gps.js loadPairing`), the iPad listens on fixed port 47231, and the phone sweeps its own hotspot subnet (`BeaconPacket.sweepHosts` / Swift `sweepHosts`; hotspot interfaces only: `ap/swlan/wlan1+/rndis` on Android, `bridge*` on iOS). Still **unconfirmed on real devices**; the Swift code was never compiled locally. Don't ask the owner for screenshots first; build things so they diagnose themselves.
+
 **The iPad loses the phone when the phone's screen turns off.** The owner has reported this several times. Versions 0.8.0 and 0.9.0 were attempted fixes that didn't work. 0.12.0 (current) is the latest attempt and **has not been confirmed on real devices**.
 
 What's known about the problem:

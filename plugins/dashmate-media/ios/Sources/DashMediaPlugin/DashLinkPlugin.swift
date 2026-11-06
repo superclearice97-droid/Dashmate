@@ -28,6 +28,8 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
     private var sendPort: UInt16 = 0
     private var sendHosts: [in_addr] = []
     private var counter: UInt64 = 0
+    private var sweep: [in_addr] = []
+    private var sweptAt = Date.distantPast
     private var fixes = 0
     private var sent = 0
     private var failed = 0
@@ -48,8 +50,9 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
     @objc func startSending(_ call: CAPPluginCall) {
         guard let key = DashLinkPlugin.key(call) else { call.reject("bad key"); return }
         let port = call.getInt("port") ?? 0
+        // Addresses are only hints now: the phone also sweeps its own hotspot network.
         let hosts = (call.getArray("hosts") ?? []).compactMap { $0 as? String }.compactMap { BeaconPacket.privateIPv4($0) }
-        guard (1...65535).contains(port), !hosts.isEmpty else { call.reject("missing port or addresses"); return }
+        guard (1...65535).contains(port) else { call.reject("missing port"); return }
         DispatchQueue.main.async {
             let m = self.manager ?? CLLocationManager()
             let status = m.authorizationStatus
@@ -64,7 +67,9 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
             self.sendHosts = hosts
             self.counter = UInt64(Date().timeIntervalSince1970 * 1000) * 1000
             (self.fixes, self.sent, self.failed, self.lastError) = (0, 0, 0, nil)
-            for h in hosts { BeaconSender.askForLocalNetwork(h, UInt16(port)) }
+            for h in (hosts + BeaconPacket.sweepHosts()).prefix(1) { BeaconSender.askForLocalNetwork(h, UInt16(port)) }
+            self.sweep = []
+            self.sweptAt = .distantPast
             if self.manager == nil {
                 m.delegate = self
                 m.desiredAccuracy = kCLLocationAccuracyBest
@@ -111,10 +116,20 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
         fixes += 1
         guard let packet = try? BeaconPacket.seal(key: key, counter: counter, json: json) else { return }
         var ok = false
-        for h in sendHosts {
+        for h in targets() {
             if let err = sender.send(packet, to: h, port: sendPort) { lastError = err } else { ok = true }
         }
         if ok { sent += 1 } else { failed += 1 }
+    }
+
+    /// The screen's addresses from pairing plus the whole hotspot network, re-read every
+    /// few seconds (the hotspot can be switched off and on, giving the screen a new address).
+    private func targets() -> [in_addr] {
+        if Date().timeIntervalSince(sweptAt) > 5 {
+            sweep = BeaconPacket.sweepHosts()
+            sweptAt = Date()
+        }
+        return sendHosts + sweep.filter { s in !sendHosts.contains { $0.s_addr == s.s_addr } }
     }
 
     public func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
@@ -129,7 +144,9 @@ public class DashLinkPlugin: CAPPlugin, CAPBridgedPlugin, CLLocationManagerDeleg
         received = 0
         rejected = 0
         let r = BeaconReceiver()
-        let port = r.start { [weak self] data in
+        // A fixed port, so the phone can find this screen again with no new pairing.
+        let want = UInt16(clamping: call.getInt("port") ?? 0)
+        let port = r.start(port: want) { [weak self] data in
             guard let self = self else { return }
             guard let opened = BeaconPacket.open(key: key, packet: data), opened.0 > self.lastCounter,
                   let obj = try? JSONSerialization.jsonObject(with: opened.1) as? [String: Any] else {

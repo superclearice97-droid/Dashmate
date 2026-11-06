@@ -35,6 +35,20 @@ public class BeaconPacketCheck {
                 for (int i = 1; i < a.length; i++) sb.append(BeaconPacket.privateIPv4(a[i]) != null ? "y" : "n");
                 System.out.println(sb);
             }
+            case "sweep" -> {
+                StringBuilder sb = new StringBuilder();
+                String[] ip = a[1].split("\\.");
+                byte[] self = { (byte) Integer.parseInt(ip[0]), (byte) Integer.parseInt(ip[1]), (byte) Integer.parseInt(ip[2]), (byte) Integer.parseInt(ip[3]) };
+                var hosts = BeaconPacket.sweepHosts(self, Integer.parseInt(a[2]));
+                sb.append(hosts.size());
+                if (!hosts.isEmpty()) sb.append(' ').append(hosts.get(0)[3] & 255).append(' ').append(hosts.get(hosts.size() - 1)[3] & 255);
+                System.out.println(sb);
+            }
+            case "iface" -> {
+                StringBuilder sb = new StringBuilder();
+                for (int i = 1; i < a.length; i++) sb.append(BeaconPacket.isHotspotInterface(a[i]) ? "y" : "n");
+                System.out.println(sb);
+            }
             default -> throw new IllegalArgumentException(a[0]);
         }
     }

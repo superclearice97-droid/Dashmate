@@ -97,12 +97,14 @@ public final class BeaconPacket {
     }
 
     /**
-     * Hotspot interfaces only (not the mobile data or home Wi-Fi connection): Android's
-     * tethering/hotspot interfaces and USB/Bluetooth tethering. The phone is the hotspot,
-     * so the screen is always one of the other addresses on this network.
+     * Local network interfaces to look for the screen on. Android names its hotspot
+     * interface differently on different phones (ap0, swlan0, wlan1, ap_br_*, ...), so
+     * rather than guess those names, skip only what can't hold the screen: loopback,
+     * mobile data, VPN and other tunnels. Only private /24-or-smaller networks are swept.
      */
-    public static boolean isHotspotInterface(String name) {
-        return name != null && name.matches("(ap|swlan|softap|wlan[1-9]|rndis|bt-pan|eth)\\d*");
+    public static boolean isSweepInterface(String name) {
+        return name != null && !name.isEmpty()
+            && !name.matches("(lo|rmnet.*|ccmni.*|pdp_ip.*|tun.*|tap.*|ppp.*|dummy.*|v4-.*|clat.*|ipsec.*|wg.*|p2p.*)\\d*");
     }
 
     /**

@@ -190,7 +190,7 @@ public class BeaconService extends Service implements LocationListener {
             List<InetAddress> found = new ArrayList<>();
             try {
                 for (NetworkInterface ni : Collections.list(NetworkInterface.getNetworkInterfaces())) {
-                    if (!ni.isUp() || !BeaconPacket.isHotspotInterface(ni.getName())) continue;
+                    if (!ni.isUp() || !BeaconPacket.isSweepInterface(ni.getName())) continue;
                     for (InterfaceAddress ia : ni.getInterfaceAddresses()) {
                         if (!(ia.getAddress() instanceof Inet4Address)) continue;
                         for (byte[] h : BeaconPacket.sweepHosts(ia.getAddress().getAddress(), ia.getNetworkPrefixLength())) {

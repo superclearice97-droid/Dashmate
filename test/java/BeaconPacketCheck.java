@@ -46,7 +46,7 @@ public class BeaconPacketCheck {
             }
             case "iface" -> {
                 StringBuilder sb = new StringBuilder();
-                for (int i = 1; i < a.length; i++) sb.append(BeaconPacket.isHotspotInterface(a[i]) ? "y" : "n");
+                for (int i = 1; i < a.length; i++) sb.append(BeaconPacket.isSweepInterface(a[i]) ? "y" : "n");
                 System.out.println(sb);
             }
             default -> throw new IllegalArgumentException(a[0]);

@@ -77,7 +77,7 @@ enum BeaconPacket {
 
 extension BeaconPacket {
     /// Every other host address on the hotspot network this iPhone is hosting (iOS names it
-    /// "bridge100"), at most a /24, so the phone finds the screen without knowing its
+    /// "bridge100") or the Wi-Fi it has joined, at most a /24, so the phone finds the screen without knowing its
     /// address, even after the hotspot gives it a new one. Only the screen holds the key.
     static func sweepHosts() -> [in_addr] {
         var out: [in_addr] = []
@@ -86,7 +86,7 @@ extension BeaconPacket {
         defer { freeifaddrs(ifap) }
         for ptr in sequence(first: first, next: { $0.pointee.ifa_next }) {
             let flags = Int32(ptr.pointee.ifa_flags)
-            guard flags & IFF_UP != 0, String(cString: ptr.pointee.ifa_name).hasPrefix("bridge"),
+            guard flags & IFF_UP != 0, isSweepInterface(String(cString: ptr.pointee.ifa_name)),
                   let sa = ptr.pointee.ifa_addr, sa.pointee.sa_family == UInt8(AF_INET),
                   let mask = ptr.pointee.ifa_netmask else { continue }
             let selfAddr = sa.withMemoryRebound(to: sockaddr_in.self, capacity: 1) { UInt32(bigEndian: $0.pointee.sin_addr.s_addr) }
@@ -101,6 +101,12 @@ extension BeaconPacket {
             }
         }
         return out
+    }
+
+    /// The hotspot this iPhone hosts ("bridge100") or the Wi-Fi it has joined ("en0"); never
+    /// mobile data ("pdp_ip"), tunnels or loopback.
+    private static func isSweepInterface(_ name: String) -> Bool {
+        name.hasPrefix("bridge") || name.hasPrefix("en")
     }
 
     private static func ipString(_ a: UInt32) -> String {

@@ -82,7 +82,7 @@ test('beacon: the phone sweeps its own hotspot network, never more than 254 addr
   assert.equal(java('sweep', '8.8.8.8', '24'), '0', 'public addresses are never swept');
 });
 
-test('beacon: only hotspot interfaces are swept, not mobile data or the home Wi-Fi', { skip: !out && 'no javac' }, () => {
-  const cases = { ap0: 'y', swlan0: 'y', wlan1: 'y', rndis0: 'y', 'bt-pan': 'y', wlan0: 'n', rmnet_data0: 'n', ccmni0: 'n', lo: 'n', dummy0: 'n' };
+test('beacon: any phone’s hotspot interface name is searched; mobile data and tunnels are not', { skip: !out && 'no javac' }, () => {
+  const cases = { ap0: 'y', swlan0: 'y', wlan1: 'y', wlan0: 'y', ap_br_wlan2: 'y', rndis0: 'y', 'bt-pan': 'y', rmnet_data0: 'n', ccmni0: 'n', lo: 'n', dummy0: 'n', tun0: 'n', ccmni1: 'n' };
   assert.equal(java('iface', ...Object.keys(cases)), Object.values(cases).join(''));
 });
